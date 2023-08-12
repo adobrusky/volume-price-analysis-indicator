@@ -1,0 +1,93 @@
+//@version=5
+indicator("VPA Indicator", overlay=true)
+
+showHammersShooters = input.bool(true, title="Show Hammers/Shooters")
+showDojis = input.bool(true, title="Show Dojis")
+showMomentum = input.bool(true, title="Show Momentum Bars")
+showOIAndII = input.bool(true, title="Show Outside Inside and Inside Inside Bars")
+showAnomalies = input.bool(true, title="Show Volume Anomalies")
+volumeSMALength = input(50, title="Volume SMA Length")
+acceptableVolumeThreshold = input(0.0, title="Acceptable Volume Threshold (% more than average)")
+highVolumeThreshold = input(3, title="High Volume Threshold (average times x)")
+atr_length = input(14, title="ATR Length")
+atrThreshold = input(1.5, title="Momentum Bar ATR Threshold")
+hammerBodyToTotalRatio = input(2, title="Hammer/Shooter Long Wick to Body Ratio (body times x)")
+upperWickToBodyRatio = input(1, title="Hammer/Shooter Short Wick to Body Ratio (body times x)")
+dojiBodyToTotalRatio = input(0.1, title="Doji Body to High/Low Ratio")
+
+// Volume calculations
+volumeSMA = ta.sma(volume, volumeSMALength)
+sufficientVolume = volume > volumeSMA + (volumeSMA * acceptableVolumeThreshold)
+highVolume = volume > volumeSMA * highVolumeThreshold
+higherVolumeThanPrev = volume > volume[1]
+
+// Calculate the open/close and highLow range of the current and previous candles
+candleOpenCloseRange = math.abs(close - open)
+candleHighLowRange = math.abs(high - low)
+prevCandleOpenCloseRange = math.abs(close[1] - open[1])
+prevCandleHighLowRange = math.abs(high[1] - low[1])
+atr_value = ta.atr(atr_length)
+
+// Calculate body size and upper wick length
+bodySize = math.abs(close - open)
+upperWick = high - math.max(open, close)
+lowerWick = math.min(open, close) - low
+highLow = math.abs(high - low)
+
+// Determine if the candle is a hammer, shooter, doji, momentum, volume anomaly, outside inside, or inside inside candle
+isDoji = bodySize <= highLow * dojiBodyToTotalRatio and sufficientVolume
+isHammer = lowerWick >= bodySize * hammerBodyToTotalRatio and math.min(open, close) > (high - (high - low) / 2) and sufficientVolume and not isDoji and upperWick <= bodySize * upperWickToBodyRatio
+isShooter = upperWick >= bodySize * hammerBodyToTotalRatio and math.max(open, close) < (high - (high - low) / 2) and sufficientVolume and not isDoji and lowerWick <= bodySize * upperWickToBodyRatio
+isDoubleInside = high < high[1] and low > low[1] and low[1] > low[2] and high[1] < high[2]
+isOutsideInside = high[1] > high[2] and low[1] < low[2] and high < high[1] and low > low[1] and sufficientVolume
+bullishMomentumCandle = volume > volume[1] and close > open and math.abs(open - close) > atr_value * atrThreshold and upperWick < bodySize
+bearishMomentumCandle = volume > volume[1] and open > close and math.abs(open - close) > atr_value * atrThreshold and lowerWick < bodySize
+bullishVolumeAnomaly = close < open and close[1] < open[1] and candleOpenCloseRange < prevCandleOpenCloseRange and higherVolumeThanPrev and sufficientVolume
+bearishVolumeAnomaly = close > open and close[1] > open[1] and candleOpenCloseRange < prevCandleOpenCloseRange and higherVolumeThanPrev and sufficientVolume
+
+// Plot momentum candles
+plotshape(showMomentum and bullishMomentumCandle and not highVolume, style=shape.triangleup, location=location.belowbar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="M")
+plotshape(showMomentum and bearishMomentumCandle and not highVolume, style=shape.triangledown, location=location.abovebar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="M")
+
+plotshape(bullishMomentumCandle and highVolume, style=shape.triangleup, location=location.belowbar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="M+")
+plotshape(bearishMomentumCandle and highVolume, style=shape.triangledown, location=location.abovebar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="M+")
+
+// Plot hammers and shooters
+plotshape(showHammersShooters and isHammer and not highVolume and not bullishVolumeAnomaly and not isDoubleInside and not isOutsideInside, style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="H")
+plotshape(showHammersShooters and isHammer and highVolume and not bullishVolumeAnomaly and not isDoubleInside and not isOutsideInside, style=shape.triangleup, location=location.belowbar, textcolor=color.rgb(255, 255, 255), color=color.rgb(211, 48, 176), text="H+")
+
+plotshape(showHammersShooters and isHammer and not highVolume and bullishVolumeAnomaly and not isDoubleInside and not isOutsideInside, style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="HA")
+plotshape(showHammersShooters and isHammer and highVolume and bullishVolumeAnomaly and not isDoubleInside and not isOutsideInside, style=shape.triangleup, location=location.belowbar, textcolor=color.rgb(255, 255, 255), color=color.rgb(211, 48, 176), text="HA+")
+
+plotshape(showHammersShooters and isShooter and not highVolume and not bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, color=color.rgb(255, 155, 93), textcolor=color.rgb(255, 255, 255), text="S")
+plotshape(showHammersShooters and isShooter and highVolume and not bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, textcolor=color.rgb(255, 255, 255), color=color.rgb(255, 155, 93), text="S+")
+
+plotshape(showHammersShooters and isShooter and not highVolume and bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, color=color.rgb(255, 155, 93), textcolor=color.rgb(255, 255, 255), text="SA")
+plotshape(showHammersShooters and isShooter and highVolume and bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, textcolor=color.rgb(255, 255, 255), color=color.rgb(255, 155, 93), text="SA+")
+
+// Plots dojis
+plotshape(showDojis and isDoji and not highVolume and not higherVolumeThanPrev, style=shape.triangledown, location=location.abovebar, color=color.rgb(201, 55, 55), textcolor=color.rgb(255, 255, 255), text="D")
+plotshape(showDojis and isDoji and highVolume and not higherVolumeThanPrev, style=shape.triangledown, location=location.abovebar, textcolor=color.rgb(255, 255, 255), color=color.rgb(201, 55, 55), text="D+")
+
+plotshape(showDojis and isDoji and not highVolume and higherVolumeThanPrev, style=shape.triangledown, location=location.abovebar, color=color.rgb(201, 55, 55), textcolor=color.rgb(255, 255, 255), text="DA")
+plotshape(showDojis and isDoji and highVolume and higherVolumeThanPrev, style=shape.triangledown, location=location.abovebar, textcolor=color.rgb(255, 255, 255), color=color.rgb(201, 55, 55), text="DA+")
+
+// Plot inside outside inside and double inside bars
+plotshape(showOIAndII and isOutsideInside and not highVolume and not isHammer, style=shape.triangleup, location=location.belowbar, color=color.rgb(96, 201, 55), textcolor=color.rgb(255, 255, 255), text="OI")
+plotshape(showOIAndII and isOutsideInside and highVolume and not isHammer, style=shape.triangleup, location=location.belowbar, textcolor=color.rgb(255, 255, 255), color=color.rgb(96, 201, 55), text="OI+")
+
+plotshape(showOIAndII and isOutsideInside and not highVolume and isHammer, style=shape.triangleup, location=location.belowbar, color=color.rgb(96, 201, 55), textcolor=color.rgb(255, 255, 255), text="HOI")
+plotshape(showOIAndII and isOutsideInside and highVolume and isHammer, style=shape.triangleup, location=location.belowbar, textcolor=color.rgb(255, 255, 255), color=color.rgb(96, 201, 55), text="HOI+")
+
+plotshape(showOIAndII and isDoubleInside and not highVolume and not isHammer, style=shape.triangleup, location=location.belowbar, color=color.rgb(96, 201, 55), textcolor=color.rgb(255, 255, 255), text="II")
+plotshape(showOIAndII and isDoubleInside and highVolume and not isHammer, style=shape.triangleup, location=location.belowbar, textcolor=color.rgb(255, 255, 255), color=color.rgb(96, 201, 55), text="II+")
+
+plotshape(showOIAndII and isDoubleInside and not highVolume and isHammer, style=shape.triangleup, location=location.belowbar, color=color.rgb(96, 201, 55), textcolor=color.rgb(255, 255, 255), text="HII")
+plotshape(showOIAndII and isDoubleInside and highVolume and isHammer, style=shape.triangleup, location=location.belowbar, textcolor=color.rgb(255, 255, 255), color=color.rgb(96, 201, 55), text="HII+")
+
+// Plot volume anomalies
+plotshape(showAnomalies and bullishVolumeAnomaly and not isDoji and not isHammer and not isShooter and not highVolume, location=location.belowbar, color=color.rgb(255, 238, 88), transp=0, style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A")
+plotshape(showAnomalies and bearishVolumeAnomaly and not isDoji and not isHammer and not isShooter and not highVolume, location=location.abovebar, color=color.rgb(255, 238, 88), transp=0, style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A")
+
+plotshape(showAnomalies and bullishVolumeAnomaly and not isDoji and not isHammer and not isShooter and highVolume, location=location.belowbar, color=color.rgb(255, 238, 88), transp=0, style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A+")
+plotshape(showAnomalies and bearishVolumeAnomaly and not isDoji and not isHammer and not isShooter and highVolume, location=location.abovebar, color=color.rgb(255, 238, 88), transp=0, style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A+")
