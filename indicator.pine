@@ -14,7 +14,7 @@ atrThreshold = input(1.5, title="Momentum Bar ATR Threshold")
 hammerBodyToTotalRatio = input(2, title="Hammer/Shooter Long Wick to Body Ratio (body times x)")
 upperWickToBodyRatio = input(1, title="Hammer/Shooter Short Wick to Body Ratio (body times x)")
 dojiBodyToTotalRatio = input(0.1, title="Doji Body to High/Low Ratio")
-autoHideAutomaticLevels = input.bool(true, title="Auto Hide Automatic Levels on Higher Timeframes")
+autoHideAutomaticLevels = input.bool(true, title="Hide Automatic Price Levels on Higher Timeframes")
 plotPrevMonthHighLow = input.bool(true, title="Plot Previous Month High/Low")
 plotPrevWeekHighLow = input.bool(true, title="Plot Previous Week High/Low")
 plotPrevDayHighLow = input.bool(true, title="Plot Previous Day High/Low")
@@ -25,14 +25,13 @@ timeframe = timeframe.period
 monthlyTimeframe = str.contains(str.tostring(timeframe), "M")
 weeklyTimeframe = str.contains(str.tostring(timeframe), "W")
 dailyTimeframe = str.contains(str.tostring(timeframe), "D")
-lessThanOneHourTimeframe = monthlyTimeframe or weeklyTimeframe or dailyTimeframe or str.tonumber(timeframe) >= 60
-if autoHideAutomaticLevels and (monthlyTimeframe  or weeklyTimeframe)
+dailyOrHigherTimeframe = autoHideAutomaticLevels and (monthlyTimeframe or weeklyTimeframe or dailyTimeframe)
+oneHourOrHigherTimeframe = autoHideAutomaticLevels and (monthlyTimeframe or weeklyTimeframe or dailyTimeframe or str.tonumber(timeframe) >= 60)
+if dailyOrHigherTimeframe
     plotPrevMonthHighLow := false
-if autoHideAutomaticLevels and (monthlyTimeframe or weeklyTimeframe or dailyTimeframe)
     plotPrevWeekHighLow := false
-if autoHideAutomaticLevels and lessThanOneHourTimeframe
+if oneHourOrHigherTimeframe
     plotPrevDayHighLow := false
-if autoHideAutomaticLevels and lessThanOneHourTimeframe
     plotOpeningPrint := false
 
 // Volume calculations

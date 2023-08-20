@@ -29,7 +29,7 @@ The VPA Indicator includes the following features:
 
 The VPA Indicator offers customization options through input parameters. You can adjust the settings to match your trading preferences:
 
-- **Show/Hide Options**: Enable or disable the display of specific candlestick patterns, volume anomalies, and price levels.
+- **Show/Hide Options**: Enable or disable the display of specific candlesticks, volume anomalies, and price levels.
 - **Volume SMA Length**: Set the length of the simple moving average (SMA) used for average volume calculations.
 - **Volume Thresholds**: Define acceptable and high volume thresholds as a percentage of the average volume. Indications of candlesticks and anomalies will not show on candles with below acceptable volume.
 - **ATR Length and Threshold**: Configure the average true range (ATR) length and threshold for identifying momentum bars.
