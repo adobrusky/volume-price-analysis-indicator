@@ -14,6 +14,26 @@ atrThreshold = input(1.5, title="Momentum Bar ATR Threshold")
 hammerBodyToTotalRatio = input(2, title="Hammer/Shooter Long Wick to Body Ratio (body times x)")
 upperWickToBodyRatio = input(1, title="Hammer/Shooter Short Wick to Body Ratio (body times x)")
 dojiBodyToTotalRatio = input(0.1, title="Doji Body to High/Low Ratio")
+autoHideAutomaticLevels = input.bool(true, title="Auto Hide Automatic Levels on Higher Timeframes")
+plotPrevMonthHighLow = input.bool(true, title="Plot Previous Month High/Low")
+plotPrevWeekHighLow = input.bool(true, title="Plot Previous Week High/Low")
+plotPrevDayHighLow = input.bool(true, title="Plot Previous Day High/Low")
+plotOpeningPrint = input.bool(true, title="Plot Opening Print")
+
+// Auto hide some of the automatic levels
+timeframe = timeframe.period
+monthlyTimeframe = str.contains(str.tostring(timeframe), "M")
+weeklyTimeframe = str.contains(str.tostring(timeframe), "W")
+dailyTimeframe = str.contains(str.tostring(timeframe), "D")
+lessThanOneHourTimeframe = monthlyTimeframe or weeklyTimeframe or dailyTimeframe or str.tonumber(timeframe) >= 60
+if autoHideAutomaticLevels and (monthlyTimeframe  or weeklyTimeframe)
+    plotPrevMonthHighLow := false
+if autoHideAutomaticLevels and (monthlyTimeframe or weeklyTimeframe or dailyTimeframe)
+    plotPrevWeekHighLow := false
+if autoHideAutomaticLevels and lessThanOneHourTimeframe
+    plotPrevDayHighLow := false
+if autoHideAutomaticLevels and lessThanOneHourTimeframe
+    plotOpeningPrint := false
 
 // Volume calculations
 volumeSMA = ta.sma(volume, volumeSMALength)
@@ -41,6 +61,32 @@ bearishMomentumCandle = volume > volume[1] and open > close and math.abs(open - 
 bullishVolumeAnomaly = (close < open and close[1] < open[1] and body < prevCandleBody and higherVolumeThanPrev and sufficientVolume) or (close < open and body > prevCandleBody and math.abs(open - close) > atrValue * atrThreshold and lowerVolumeThanPrev and sufficientVolume)
 bearishVolumeAnomaly = (close > open and close[1] > open[1] and body < prevCandleBody and higherVolumeThanPrev and sufficientVolume) or (close > open and body > prevCandleBody and math.abs(open - close) > atrValue * atrThreshold and lowerVolumeThanPrev and sufficientVolume)
 
+// Pull in previous day, week, and month high/low
+prevMonthHigh = request.security(syminfo.tickerid, "M", high[1], lookahead=barmerge.lookahead_on)
+prevMonthLow = request.security(syminfo.tickerid, "M", low[1], lookahead=barmerge.lookahead_on)
+prevWeekHigh = request.security(syminfo.tickerid, "W", high[1], lookahead=barmerge.lookahead_on)
+prevWeekLow = request.security(syminfo.tickerid, "W", low[1], lookahead=barmerge.lookahead_on)
+prevDayHigh = request.security(syminfo.tickerid, "D", high[1], lookahead=barmerge.lookahead_on)
+prevDayLow = request.security(syminfo.tickerid, "D", low[1], lookahead=barmerge.lookahead_on)
+openingPrint = request.security(syminfo.tickerid, "D", open, lookahead=barmerge.lookahead_on)
+
+// Hide automatic levels so chart isn't so cluttered
+prevMonthHigh := plotPrevMonthHighLow ? prevMonthHigh : na
+prevMonthLow := plotPrevMonthHighLow ? prevMonthLow : na
+prevWeekHigh := plotPrevWeekHighLow ? prevWeekHigh : na
+prevWeekLow := plotPrevWeekHighLow ? prevWeekLow : na
+prevDayHigh := plotPrevDayHighLow ? prevDayHigh : na
+prevDayLow := plotPrevDayHighLow ? prevDayLow : na
+openingPrint := plotOpeningPrint ? openingPrint : na
+
+// Plot prev day, week, and month high/low and the opening print
+plot(prevMonthHigh, style=plot.style_circles, color=color.green, linewidth=4)
+plot(prevMonthLow, style=plot.style_circles, color=color.red, linewidth=4)
+plot(prevWeekHigh, style=plot.style_circles, color=color.green, linewidth=2)
+plot(prevWeekLow, style=plot.style_circles, color=color.red, linewidth=2)
+plot(prevDayHigh, style=plot.style_circles, color=color.green, linewidth=1)
+plot(prevDayLow, style=plot.style_circles, color=color.red, linewidth=1)
+plot(openingPrint, style=plot.style_circles, color=color.rgb(255, 167, 5), linewidth=1)
 
 // Plot momentum candles
 plotshape(showMomentum and bullishMomentumCandle and not highVolume, style=shape.triangleup, location=location.belowbar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="M")
@@ -83,8 +129,8 @@ plotshape(showOIAndII and isDoubleInside and not highVolume and isHammer, style=
 plotshape(showOIAndII and isDoubleInside and highVolume and isHammer, style=shape.triangleup, location=location.belowbar, textcolor=color.rgb(255, 255, 255), color=color.rgb(96, 201, 55), text="HII+")
 
 // Plot volume anomalies
-plotshape(showAnomalies and bullishVolumeAnomaly and not isDoji and not isHammer and not isShooter and not highVolume, location=location.belowbar, color=color.rgb(255, 238, 88), transp=0, style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A")
-plotshape(showAnomalies and bearishVolumeAnomaly and not isDoji and not isHammer and not isShooter and not highVolume, location=location.abovebar, color=color.rgb(255, 238, 88), transp=0, style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A")
+plotshape(showAnomalies and bullishVolumeAnomaly and not isDoji and not isHammer and not isShooter and not highVolume, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A")
+plotshape(showAnomalies and bearishVolumeAnomaly and not isDoji and not isHammer and not isShooter and not highVolume, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A")
 
-plotshape(showAnomalies and bullishVolumeAnomaly and not isDoji and not isHammer and not isShooter and highVolume, location=location.belowbar, color=color.rgb(255, 238, 88), transp=0, style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A+")
-plotshape(showAnomalies and bearishVolumeAnomaly and not isDoji and not isHammer and not isShooter and highVolume, location=location.abovebar, color=color.rgb(255, 238, 88), transp=0, style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A+")
+plotshape(showAnomalies and bullishVolumeAnomaly and not isDoji and not isHammer and not isShooter and highVolume, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A+")
+plotshape(showAnomalies and bearishVolumeAnomaly and not isDoji and not isHammer and not isShooter and highVolume, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A+")
