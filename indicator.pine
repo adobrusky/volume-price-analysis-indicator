@@ -20,6 +20,7 @@ volumeSMA = ta.sma(volume, volumeSMALength)
 sufficientVolume = volume > volumeSMA + (volumeSMA * acceptableVolumeThreshold)
 highVolume = volume > volumeSMA * highVolumeThreshold
 higherVolumeThanPrev = volume > volume[1]
+lowerVolumeThanPrev = volume < volume[1]
 
 // Price action calculations
 body = math.abs(close - open)
@@ -37,8 +38,9 @@ isDoubleInside = high < high[1] and low > low[1] and low[1] > low[2] and high[1]
 isOutsideInside = high[1] > high[2] and low[1] < low[2] and high < high[1] and low > low[1] and sufficientVolume
 bullishMomentumCandle = volume > volume[1] and close > open and math.abs(open - close) > atrValue * atrThreshold and upperWick < body
 bearishMomentumCandle = volume > volume[1] and open > close and math.abs(open - close) > atrValue * atrThreshold and lowerWick < body
-bullishVolumeAnomaly = close < open and close[1] < open[1] and body < prevCandleBody and higherVolumeThanPrev and sufficientVolume
-bearishVolumeAnomaly = close > open and close[1] > open[1] and body < prevCandleBody and higherVolumeThanPrev and sufficientVolume
+bullishVolumeAnomaly = (close < open and close[1] < open[1] and body < prevCandleBody and higherVolumeThanPrev and sufficientVolume) or (close < open and body > prevCandleBody and math.abs(open - close) > atrValue * atrThreshold and lowerVolumeThanPrev and sufficientVolume)
+bearishVolumeAnomaly = (close > open and close[1] > open[1] and body < prevCandleBody and higherVolumeThanPrev and sufficientVolume) or (close > open and body > prevCandleBody and math.abs(open - close) > atrValue * atrThreshold and lowerVolumeThanPrev and sufficientVolume)
+
 
 // Plot momentum candles
 plotshape(showMomentum and bullishMomentumCandle and not highVolume, style=shape.triangleup, location=location.belowbar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="M")
