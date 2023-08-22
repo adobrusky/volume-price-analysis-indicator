@@ -25,13 +25,22 @@ timeframe = timeframe.period
 monthlyTimeframe = str.contains(str.tostring(timeframe), "M")
 weeklyTimeframe = str.contains(str.tostring(timeframe), "W")
 dailyTimeframe = str.contains(str.tostring(timeframe), "D")
-dailyOrHigherTimeframe = autoHideAutomaticLevels and (monthlyTimeframe or weeklyTimeframe or dailyTimeframe)
-oneHourOrHigherTimeframe = autoHideAutomaticLevels and (monthlyTimeframe or weeklyTimeframe or dailyTimeframe or str.tonumber(timeframe) >= 60)
-if dailyOrHigherTimeframe
+weeklyOrHigherTimeframe = monthlyTimeframe or weeklyTimeframe
+dailyOrHigherTimeframe = weeklyOrHigherTimeframe or dailyTimeframe
+higherTimeframeThanOneHour =  dailyOrHigherTimeframe or str.tonumber(timeframe) > 60
+if monthlyTimeframe or (autoHideAutomaticLevels and dailyOrHigherTimeframe)
     plotPrevMonthHighLow := false
     plotPrevWeekHighLow := false
-if oneHourOrHigherTimeframe
     plotPrevDayHighLow := false
+    plotOpeningPrint := false
+if weeklyOrHigherTimeframe
+    plotPrevWeekHighLow := false
+    plotPrevDayHighLow := false
+    plotOpeningPrint := false
+if dailyOrHigherTimeframe
+    plotPrevDayHighLow := false
+    plotOpeningPrint := false
+if higherTimeframeThanOneHour
     plotOpeningPrint := false
 
 // Volume calculations
@@ -79,13 +88,13 @@ prevDayLow := plotPrevDayHighLow ? prevDayLow : na
 openingPrint := plotOpeningPrint ? openingPrint : na
 
 // Plot prev day, week, and month high/low and the opening print
-plot(prevMonthHigh, style=plot.style_circles, color=color.green, linewidth=4)
-plot(prevMonthLow, style=plot.style_circles, color=color.red, linewidth=4)
-plot(prevWeekHigh, style=plot.style_circles, color=color.green, linewidth=2)
-plot(prevWeekLow, style=plot.style_circles, color=color.red, linewidth=2)
-plot(prevDayHigh, style=plot.style_circles, color=color.green, linewidth=1)
-plot(prevDayLow, style=plot.style_circles, color=color.red, linewidth=1)
-plot(openingPrint, style=plot.style_circles, color=color.rgb(255, 167, 5), linewidth=1)
+plot(prevMonthHigh, style=plot.style_circles, color=color.green, linewidth=5, trackprice = true, show_last = 1, offset = -99999)
+plot(prevMonthLow, style=plot.style_circles, color=color.red, linewidth=5, trackprice = true, show_last = 1, offset = -99999)
+plot(prevWeekHigh, style=plot.style_circles, color=color.green, linewidth=3, trackprice = true, show_last = 1, offset = -99999)
+plot(prevWeekLow, style=plot.style_circles, color=color.red, linewidth=3, trackprice = true, show_last = 1, offset = -99999)
+plot(prevDayHigh, style=plot.style_circles, color=color.green, linewidth=2, trackprice = true, show_last = 1, offset = -99999)
+plot(prevDayLow, style=plot.style_circles, color=color.red, linewidth=2, trackprice = true, show_last = 1, offset = -99999)
+plot(openingPrint, style=plot.style_circles, color=color.rgb(255, 167, 5), linewidth=2, trackprice = true, show_last = 1, offset = -99999)
 
 // Plot momentum candles
 plotshape(showMomentum and bullishMomentumCandle and not highVolume, style=shape.triangleup, location=location.belowbar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="M")
