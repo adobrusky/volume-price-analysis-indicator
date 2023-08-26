@@ -1,6 +1,7 @@
 //@version=5
-indicator("VPA Indicator", overlay=true)
+indicator(title="Volume Price Analysis Indicator", shorttitle="VPA Indicator", overlay=true)
 
+// User Inputs
 showHammersShooters = input.bool(true, title="Show Hammers/Shooters")
 showDojis = input.bool(true, title="Show Dojis")
 showMomentum = input.bool(true, title="Show Momentum Bars")
@@ -12,14 +13,17 @@ acceptableVolumeThreshold = input(0.0, title="Acceptable Volume Threshold (% mor
 highVolumeThreshold = input(3, title="High Volume Threshold (average times x)")
 atrLength = input(14, title="ATR Length")
 atrThreshold = input(1.5, title="Momentum Bar ATR Threshold")
-hammerBodyToTotalRatio = input(2, title="Hammer/Shooter Long Wick to Body Ratio (body times x)")
-upperWickToBodyRatio = input(1, title="Hammer/Shooter Short Wick to Body Ratio (body times x)")
+hammerBodyToTotalRatio = input(2.0, title="Hammer/Shooter Long Wick to Body Ratio (body times x)")
+upperWickToBodyRatio = input(1.0, title="Hammer/Shooter Short Wick to Body Ratio (body times x)")
 dojiBodyToTotalRatio = input(0.1, title="Doji Body to High/Low Ratio")
 autoHideAutomaticLevels = input.bool(true, title="Hide Automatic Price Levels on Higher Timeframes")
 plotPrevMonthHighLow = input.bool(true, title="Plot Previous Month High/Low")
 plotPrevWeekHighLow = input.bool(true, title="Plot Previous Week High/Low")
 plotPrevDayHighLow = input.bool(true, title="Plot Previous Day High/Low")
 plotOpeningPrint = input.bool(true, title="Plot Opening Print")
+highPriceLevelColor  = input(color.rgb(8, 153, 129, 30), title="High Price Level Color")
+lowPriceLevelColor  = input(color.rgb(242, 54, 69, 30), title ="Low Price Level Color")
+openingPrintColor = input(color.new(#fa9c0f, 10), title="Opening Print Color")
 
 // Auto hide some of the automatic levels
 timeframe = timeframe.period
@@ -28,19 +32,23 @@ weeklyTimeframe = str.contains(str.tostring(timeframe), "W")
 dailyTimeframe = str.contains(str.tostring(timeframe), "D")
 weeklyOrHigherTimeframe = monthlyTimeframe or weeklyTimeframe
 dailyOrHigherTimeframe = weeklyOrHigherTimeframe or dailyTimeframe
-higherTimeframeThanOneHour =  dailyOrHigherTimeframe or str.tonumber(timeframe) > 60
+higherTimeframeThanOneHour = dailyOrHigherTimeframe or str.tonumber(timeframe) > 60
+
 if monthlyTimeframe or (autoHideAutomaticLevels and dailyOrHigherTimeframe)
     plotPrevMonthHighLow := false
     plotPrevWeekHighLow := false
     plotPrevDayHighLow := false
     plotOpeningPrint := false
+
 if weeklyOrHigherTimeframe
     plotPrevWeekHighLow := false
     plotPrevDayHighLow := false
     plotOpeningPrint := false
+
 if dailyOrHigherTimeframe
     plotPrevDayHighLow := false
     plotOpeningPrint := false
+
 if higherTimeframeThanOneHour
     plotOpeningPrint := false
 
@@ -59,7 +67,7 @@ upperWick = high - math.max(open, close)
 lowerWick = math.min(open, close) - low
 atrValue = ta.atr(atrLength)
 
-// Determine if the candle is a hammer, shooter, doji, momentum, volume anomaly, outside inside, or inside inside candle
+// Determine candle types
 isDoji = body <= highLow * dojiBodyToTotalRatio and sufficientVolume
 isHammer = lowerWick >= body * hammerBodyToTotalRatio and math.min(open, close) > (high - (high - low) / 2) and sufficientVolume and not isDoji and upperWick <= body * upperWickToBodyRatio
 isShooter = upperWick >= body * hammerBodyToTotalRatio and math.max(open, close) < (high - (high - low) / 2) and sufficientVolume and not isDoji and lowerWick <= body * upperWickToBodyRatio
@@ -83,7 +91,7 @@ prevDayHigh = request.security(syminfo.tickerid, "D", high[1], lookahead=barmerg
 prevDayLow = request.security(syminfo.tickerid, "D", low[1], lookahead=barmerge.lookahead_on)
 openingPrint = request.security(syminfo.tickerid, "D", open, lookahead=barmerge.lookahead_on)
 
-// Hide automatic levels so chart isn't so cluttered
+// Hide automatic levels
 prevMonthHigh := plotPrevMonthHighLow ? prevMonthHigh : na
 prevMonthLow := plotPrevMonthHighLow ? prevMonthLow : na
 prevWeekHigh := plotPrevWeekHighLow ? prevWeekHigh : na
@@ -93,13 +101,13 @@ prevDayLow := plotPrevDayHighLow ? prevDayLow : na
 openingPrint := plotOpeningPrint ? openingPrint : na
 
 // Plot prev day, week, and month high/low and the opening print
-plot(prevMonthHigh, style=plot.style_circles, color=color.green, linewidth=5, trackprice = true, show_last = 1, offset = -99999)
-plot(prevMonthLow, style=plot.style_circles, color=color.red, linewidth=5, trackprice = true, show_last = 1, offset = -99999)
-plot(prevWeekHigh, style=plot.style_circles, color=color.green, linewidth=3, trackprice = true, show_last = 1, offset = -99999)
-plot(prevWeekLow, style=plot.style_circles, color=color.red, linewidth=3, trackprice = true, show_last = 1, offset = -99999)
-plot(prevDayHigh, style=plot.style_circles, color=color.green, linewidth=2, trackprice = true, show_last = 1, offset = -99999)
-plot(prevDayLow, style=plot.style_circles, color=color.red, linewidth=2, trackprice = true, show_last = 1, offset = -99999)
-plot(openingPrint, style=plot.style_circles, color=color.rgb(255, 167, 5), linewidth=2, trackprice = true, show_last = 1, offset = -99999)
+plot(prevMonthHigh, style=plot.style_circles, color=highPriceLevelColor, linewidth=5, trackprice = true, show_last = 1, offset = -99999)
+plot(prevMonthLow, style=plot.style_circles, color=lowPriceLevelColor, linewidth=5, trackprice = true, show_last = 1, offset = -99999)
+plot(prevWeekHigh, style=plot.style_circles, color=highPriceLevelColor, linewidth=3, trackprice = true, show_last = 1, offset = -99999)
+plot(prevWeekLow, style=plot.style_circles, color=lowPriceLevelColor, linewidth=3, trackprice = true, show_last = 1, offset = -99999)
+plot(prevDayHigh, style=plot.style_circles, color=highPriceLevelColor, linewidth=2, trackprice = true, show_last = 1, offset = -99999)
+plot(prevDayLow, style=plot.style_circles, color=lowPriceLevelColor, linewidth=2, trackprice = true, show_last = 1, offset = -99999)
+plot(openingPrint, style=plot.style_circles, color=openingPrintColor, linewidth=2, trackprice = true, show_last = 1, offset = -99999)
 
 // Plot momentum candles
 plotshape(showMomentum and bullishMomentumCandle and not highVolume, style=shape.triangleup, location=location.belowbar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="M")
