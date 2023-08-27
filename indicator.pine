@@ -53,7 +53,6 @@ if not timeframe.isintraday
 // Volume calculations
 usingSMA = volumeMetric == "SMA"
 volumeSMA = usingSMA ? ta.sma(volume, volumeSMALength) : 0
-highVolume = volume > volumeSMA * highVolumeThreshold
 higherVolumeThanPrev = volume > volume[1]
 lowerVolumeThanPrev = volume < volume[1]
 
@@ -67,6 +66,7 @@ get_median(length) =>
 var regularSessionTicker = ticker.new(syminfo.prefix, syminfo.tickerid, session.regular)
 medianVolume = usingSMA ? 0 : request.security(regularSessionTicker, timeframe.period, get_median(volumeMedianLength))
 sufficientVolume = usingSMA ? volume > volumeSMA * acceptableVolumeThreshold : volume > medianVolume * acceptableVolumeThreshold
+highVolume = usingSMA ? volume > volumeSMA * highVolumeThreshold : volume > medianVolume * highVolumeThreshold
 
 if na(sufficientVolume)
     sufficientVolume := true
