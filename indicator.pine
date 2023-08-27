@@ -8,13 +8,16 @@ showMomentum = input.bool(true, title="Show Momentum Bars")
 showOIAndII = input.bool(true, title="Show Outside Inside and Inside Inside Bars")
 showHVAnomalies = input.bool(true, title="Show High Volume Anomalies")
 showLVAnomalies = input.bool(true, title="Show Low Volume Anomalies")
-volumeSMALength = input(50, title="Volume SMA Length")
-acceptableVolumeThreshold = input(0.0, title="Acceptable Volume Threshold (% more than average)")
-highVolumeThreshold = input(3, title="High Volume Threshold (average times x)")
+volumeMetric = input.string(defval = "SMA", title   = "Acceptable Volume Metric", options = ['SMA', 'Median'])
+volumeSMALength = input.int(50, minval=10, maxval=500,title="Volume SMA Length")
+volumeMedianLength = input.int(200, minval=10, maxval=500, title="Volume Median Length")
+acceptableVolumeThreshold = input(1.0, title="Acceptable Volume Threshold")
+highVolumeThreshold = input(3.0, title="High Volume Threshold")
 atrLength = input(14, title="ATR Length")
+acceptableVolatilityThreshold = input(0.5, title="Acceptable Volatility Threshold")
 atrThreshold = input(1.5, title="Momentum Bar ATR Threshold")
-hammerBodyToTotalRatio = input(2.0, title="Hammer/Shooter Long Wick to Body Ratio (body times x)")
-upperWickToBodyRatio = input(1.0, title="Hammer/Shooter Short Wick to Body Ratio (body times x)")
+hammerBodyToTotalRatio = input(2.0, title="Hammer/Shooter Long Wick to Body Ratio")
+upperWickToBodyRatio = input(1.0, title="Hammer/Shooter Short Wick to Body Ratio")
 dojiBodyToTotalRatio = input(0.1, title="Doji Body to High/Low Ratio")
 autoHideAutomaticLevels = input.bool(true, title="Hide Automatic Price Levels on Higher Timeframes")
 plotPrevMonthHighLow = input.bool(true, title="Plot Previous Month High/Low")
@@ -26,15 +29,10 @@ lowPriceLevelColor  = input(color.rgb(242, 54, 69, 30), title ="Low Price Level 
 openingPrintColor = input(color.new(#fa9c0f, 10), title="Opening Print Color")
 
 // Auto hide some of the automatic levels
-timeframe = timeframe.period
-monthlyTimeframe = str.contains(str.tostring(timeframe), "M")
-weeklyTimeframe = str.contains(str.tostring(timeframe), "W")
-dailyTimeframe = str.contains(str.tostring(timeframe), "D")
-weeklyOrHigherTimeframe = monthlyTimeframe or weeklyTimeframe
-dailyOrHigherTimeframe = weeklyOrHigherTimeframe or dailyTimeframe
-higherTimeframeThanOneHour = dailyOrHigherTimeframe or str.tonumber(timeframe) > 60
+weeklyOrHigherTimeframe = timeframe.ismonthly or timeframe.isweekly
+dailyOrHigherTimeframe = weeklyOrHigherTimeframe or timeframe.isdaily
 
-if monthlyTimeframe or (autoHideAutomaticLevels and dailyOrHigherTimeframe)
+if timeframe.ismonthly or (autoHideAutomaticLevels and dailyOrHigherTimeframe)
     plotPrevMonthHighLow := false
     plotPrevWeekHighLow := false
     plotPrevDayHighLow := false
@@ -49,15 +47,29 @@ if dailyOrHigherTimeframe
     plotPrevDayHighLow := false
     plotOpeningPrint := false
 
-if higherTimeframeThanOneHour
+if not timeframe.isintraday
     plotOpeningPrint := false
 
 // Volume calculations
-volumeSMA = ta.sma(volume, volumeSMALength)
-sufficientVolume = volume > volumeSMA + (volumeSMA * acceptableVolumeThreshold)
+usingSMA = volumeMetric == "SMA"
+volumeSMA = usingSMA ? ta.sma(volume, volumeSMALength) : 0
 highVolume = volume > volumeSMA * highVolumeThreshold
 higherVolumeThanPrev = volume > volume[1]
 lowerVolumeThanPrev = volume < volume[1]
+
+// Volume median calculation
+get_median(length) =>
+    float[] volumes = array.new_float(length)
+    for i = 0 to length - 1
+        array.set(volumes, i, volume[i])
+    array.median(volumes)
+
+var regularSessionTicker = ticker.new(syminfo.prefix, syminfo.tickerid, session.regular)
+medianVolume = usingSMA ? 0 : request.security(regularSessionTicker, timeframe.period, get_median(volumeMedianLength))
+sufficientVolume = usingSMA ? volume > volumeSMA * acceptableVolumeThreshold : volume > medianVolume * acceptableVolumeThreshold
+
+if na(sufficientVolume)
+    sufficientVolume := true
 
 // Price action calculations
 body = math.abs(close - open)
@@ -66,39 +78,31 @@ prevCandleBody = math.abs(close[1] - open[1])
 upperWick = high - math.max(open, close)
 lowerWick = math.min(open, close) - low
 atrValue = ta.atr(atrLength)
+sufficientVolatility = math.abs(high - low) >= atrValue * acceptableVolatilityThreshold
 
 // Determine candle types
-isDoji = body <= highLow * dojiBodyToTotalRatio and sufficientVolume
-isHammer = lowerWick >= body * hammerBodyToTotalRatio and math.min(open, close) > (high - (high - low) / 2) and sufficientVolume and not isDoji and upperWick <= body * upperWickToBodyRatio
-isShooter = upperWick >= body * hammerBodyToTotalRatio and math.max(open, close) < (high - (high - low) / 2) and sufficientVolume and not isDoji and lowerWick <= body * upperWickToBodyRatio
-isDoubleInside = high < high[1] and low > low[1] and low[1] > low[2] and high[1] < high[2]
-isOutsideInside = high[1] > high[2] and low[1] < low[2] and high < high[1] and low > low[1] and sufficientVolume
-bullishMomentumCandle = volume > volume[1] and close > open and math.abs(open - close) > atrValue * atrThreshold and upperWick < body
-bearishMomentumCandle = volume > volume[1] and open > close and math.abs(open - close) > atrValue * atrThreshold and lowerWick < body
-bullishHighVolumeAnomaly = close < open and close[1] < open[1] and body < prevCandleBody and higherVolumeThanPrev and sufficientVolume
-bearishHighVolumeAnomaly = close > open and close[1] > open[1] and body < prevCandleBody and higherVolumeThanPrev and sufficientVolume
-bullishLowVolumeAnomaly = close < open and body > prevCandleBody and math.abs(open - close) > atrValue * atrThreshold and lowerVolumeThanPrev and sufficientVolume
-bearishLowVolumeAnomaly = close > open and body > prevCandleBody and math.abs(open - close) > atrValue * atrThreshold and lowerVolumeThanPrev and sufficientVolume
-bullishVolumeAnomaly = bullishHighVolumeAnomaly or bullishLowVolumeAnomaly
-bearishVolumeAnomaly = bearishHighVolumeAnomaly or bearishLowVolumeAnomaly
+isDoji = body <= highLow * dojiBodyToTotalRatio and sufficientVolume and sufficientVolatility
+isHammer = lowerWick >= body * hammerBodyToTotalRatio and math.min(open, close) > (high - (high - low) / 2) and sufficientVolume and not isDoji and upperWick <= body * upperWickToBodyRatio and sufficientVolatility
+isShooter = upperWick >= body * hammerBodyToTotalRatio and math.max(open, close) < (high - (high - low) / 2) and sufficientVolume and not isDoji and lowerWick <= body * upperWickToBodyRatio and sufficientVolatility
+isDoubleInside = high < high[1] and low > low[1] and low[1] > low[2] and high[1] < high[2] and sufficientVolatility
+isOutsideInside = high[1] > high[2] and low[1] < low[2] and high < high[1] and low > low[1] and sufficientVolume and sufficientVolatility
+bullishMomentumCandle = (na(volume) or volume > volume[1]) and close > open and math.abs(open - close) > atrValue * atrThreshold and upperWick < body
+bearishMomentumCandle = (na(volume) or volume > volume[1]) and open > close and math.abs(open - close) > atrValue * atrThreshold and lowerWick < body
+bullishHighVolumeAnomaly = close < open and close[1] < open[1] and body < prevCandleBody and higherVolumeThanPrev and sufficientVolume and sufficientVolatility
+bearishHighVolumeAnomaly = close > open and close[1] > open[1] and body < prevCandleBody and higherVolumeThanPrev and sufficientVolume and sufficientVolatility
+bullishLowVolumeAnomaly = close < open and body > prevCandleBody and math.abs(open - close) > atrValue * atrThreshold and lowerVolumeThanPrev and sufficientVolume and sufficientVolatility
+bearishLowVolumeAnomaly = close > open and body > prevCandleBody and math.abs(open - close) > atrValue * atrThreshold and lowerVolumeThanPrev and sufficientVolume and sufficientVolatility
+bullishVolumeAnomaly = bullishHighVolumeAnomaly or bullishLowVolumeAnomaly and sufficientVolatility
+bearishVolumeAnomaly = bearishHighVolumeAnomaly or bearishLowVolumeAnomaly and sufficientVolatility
 
 // Pull in previous day, week, and month high/low
-prevMonthHigh = request.security(syminfo.tickerid, "M", high[1], lookahead=barmerge.lookahead_on)
-prevMonthLow = request.security(syminfo.tickerid, "M", low[1], lookahead=barmerge.lookahead_on)
-prevWeekHigh = request.security(syminfo.tickerid, "W", high[1], lookahead=barmerge.lookahead_on)
-prevWeekLow = request.security(syminfo.tickerid, "W", low[1], lookahead=barmerge.lookahead_on)
-prevDayHigh = request.security(syminfo.tickerid, "D", high[1], lookahead=barmerge.lookahead_on)
-prevDayLow = request.security(syminfo.tickerid, "D", low[1], lookahead=barmerge.lookahead_on)
-openingPrint = request.security(syminfo.tickerid, "D", open, lookahead=barmerge.lookahead_on)
-
-// Hide automatic levels
-prevMonthHigh := plotPrevMonthHighLow ? prevMonthHigh : na
-prevMonthLow := plotPrevMonthHighLow ? prevMonthLow : na
-prevWeekHigh := plotPrevWeekHighLow ? prevWeekHigh : na
-prevWeekLow := plotPrevWeekHighLow ? prevWeekLow : na
-prevDayHigh := plotPrevDayHighLow ? prevDayHigh : na
-prevDayLow := plotPrevDayHighLow ? prevDayLow : na
-openingPrint := plotOpeningPrint ? openingPrint : na
+prevMonthHigh = plotPrevMonthHighLow ? request.security(syminfo.tickerid, "M", high[1], lookahead=barmerge.lookahead_on) : na
+prevMonthLow = plotPrevMonthHighLow ? request.security(syminfo.tickerid, "M", low[1], lookahead=barmerge.lookahead_on) : na
+prevWeekHigh = plotPrevWeekHighLow ? request.security(syminfo.tickerid, "W", high[1], lookahead=barmerge.lookahead_on) : na
+prevWeekLow = plotPrevWeekHighLow ? request.security(syminfo.tickerid, "W", low[1], lookahead=barmerge.lookahead_on) : na
+prevDayHigh = plotPrevDayHighLow ? request.security(syminfo.tickerid, "D", high[1], lookahead=barmerge.lookahead_on) : na
+prevDayLow = plotPrevDayHighLow ? request.security(syminfo.tickerid, "D", low[1], lookahead=barmerge.lookahead_on) : na
+openingPrint = plotOpeningPrint ? request.security(syminfo.tickerid, "D", open, lookahead=barmerge.lookahead_on) : na
 
 // Plot prev day, week, and month high/low and the opening print
 plot(prevMonthHigh, style=plot.style_circles, color=highPriceLevelColor, linewidth=5, trackprice = true, show_last = 1, offset = -99999)
