@@ -15,7 +15,7 @@ volumeMetric = input.string("SMA", title="Acceptable Volume Metric", options = [
 volumeSMALength = input.int(50, minval=10, maxval=500,title="Volume SMA Length")
 volumeMedianLength = input.int(50, minval=10, maxval=500, title="Volume Median Length (Only Regular Session Data)")
 acceptableVolumeThreshold = input(1.0, title="Acceptable Volume Threshold")
-highVolumeThreshold = input(3.0, title="High Volume Threshold")
+highVolumeThreshold = input(2.0, title="High Volume Threshold")
 atrLength = input(14, title="ATR Length")
 acceptableVolatilityThreshold = input(0.5, title="Acceptable Volatility Threshold")
 atrThreshold = input(1.5, title="Momentum Bar ATR Threshold")
@@ -87,16 +87,16 @@ sufficientVolatility = math.abs(high - low) >= atrValue * acceptableVolatilityTh
 isDoji = body <= highLow * dojiBodyToTotalRatio and sufficientVolume and sufficientVolatility
 isHammer = lowerWick >= body * hammerBodyToTotalRatio and math.min(open, close) > (high - (high - low) / 2) and sufficientVolume and not isDoji and upperWick <= body * upperWickToBodyRatio and sufficientVolatility
 isShooter = upperWick >= body * hammerBodyToTotalRatio and math.max(open, close) < (high - (high - low) / 2) and sufficientVolume and not isDoji and lowerWick <= body * upperWickToBodyRatio and sufficientVolatility
-isDoubleInside = high < high[1] and low > low[1] and low[1] > low[2] and high[1] < high[2] and sufficientVolatility
+isDoubleInside = high < high[1] and low > low[1] and low[1] > low[2] and high[1] < high[2] and sufficientVolume and sufficientVolatility
 isOutsideInside = high[1] > high[2] and low[1] < low[2] and high < high[1] and low > low[1] and sufficientVolume and sufficientVolatility
-bullishMomentumCandle = (na(volume) or volume > volume[1]) and close > open and math.abs(open - close) > atrValue * atrThreshold and upperWick < body
-bearishMomentumCandle = (na(volume) or volume > volume[1]) and open > close and math.abs(open - close) > atrValue * atrThreshold and lowerWick < body
+bullishMomentumCandle = (na(volume) or volume > volume[1]) and close > open and math.abs(open - close) > atrValue * atrThreshold and upperWick < body and sufficientVolume
+bearishMomentumCandle = (na(volume) or volume > volume[1]) and open > close and math.abs(open - close) > atrValue * atrThreshold and lowerWick < body and sufficientVolume
 bullishHighVolumeAnomaly = close < open and close[1] < open[1] and body < prevCandleBody and higherVolumeThanPrev and sufficientVolume and sufficientVolatility
 bearishHighVolumeAnomaly = close > open and close[1] > open[1] and body < prevCandleBody and higherVolumeThanPrev and sufficientVolume and sufficientVolatility
 bullishLowVolumeAnomaly = close < open and body > prevCandleBody and math.abs(open - close) > atrValue * atrThreshold and lowerVolumeThanPrev and sufficientVolume and sufficientVolatility
 bearishLowVolumeAnomaly = close > open and body > prevCandleBody and math.abs(open - close) > atrValue * atrThreshold and lowerVolumeThanPrev and sufficientVolume and sufficientVolatility
-bullishVolumeAnomaly = bullishHighVolumeAnomaly or bullishLowVolumeAnomaly and sufficientVolatility
-bearishVolumeAnomaly = bearishHighVolumeAnomaly or bearishLowVolumeAnomaly and sufficientVolatility
+bullishVolumeAnomaly = bullishHighVolumeAnomaly or bullishLowVolumeAnomaly
+bearishVolumeAnomaly = bearishHighVolumeAnomaly or bearishLowVolumeAnomaly
 
 // Pull in previous day, week, and month high/low
 prevMonthHigh = plotPrevMonthHighLow ? request.security(syminfo.tickerid, "M", high[1], lookahead=barmerge.lookahead_on) : na
