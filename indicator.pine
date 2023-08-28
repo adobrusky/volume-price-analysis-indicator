@@ -1,5 +1,8 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © adobrusky
+
 //@version=5
-indicator(title="Volume Price Analysis Indicator", shorttitle="VPA Indicator", overlay=true)
+indicator("Volume Price Analysis Indicator", shorttitle="VPA Indicator", overlay=true)
 
 // User Inputs
 showHammersShooters = input.bool(true, title="Show Hammers/Shooters")
@@ -8,7 +11,7 @@ showMomentum = input.bool(true, title="Show Momentum Bars")
 showOIAndII = input.bool(true, title="Show Outside Inside and Inside Inside Bars")
 showHVAnomalies = input.bool(true, title="Show High Volume Anomalies")
 showLVAnomalies = input.bool(true, title="Show Low Volume Anomalies")
-volumeMetric = input.string(defval = "SMA", title   = "Acceptable Volume Metric", options = ['SMA', 'Median'])
+volumeMetric = input.string("SMA", title="Acceptable Volume Metric", options = ['SMA', 'Median'])
 volumeSMALength = input.int(50, minval=10, maxval=500,title="Volume SMA Length")
 volumeMedianLength = input.int(50, minval=10, maxval=500, title="Volume Median Length (Only Regular Session Data)")
 acceptableVolumeThreshold = input(1.0, title="Acceptable Volume Threshold")
@@ -26,7 +29,7 @@ plotPrevDayHighLow = input.bool(true, title="Plot Previous Day High/Low")
 plotOpeningPrint = input.bool(true, title="Plot Opening Print")
 highPriceLevelColor  = input(color.rgb(8, 153, 129, 30), title="High Price Level Color")
 lowPriceLevelColor  = input(color.rgb(242, 54, 69, 30), title ="Low Price Level Color")
-openingPrintColor = input(color.new(#fa9c0f, 10), title="Opening Print Color")
+openingPrintColor = input(color.rgb(243, 152, 15), title="Opening Print Color")
 
 // Auto hide some of the automatic levels
 weeklyOrHigherTimeframe = timeframe.ismonthly or timeframe.isweekly
