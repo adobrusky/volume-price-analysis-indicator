@@ -12,10 +12,11 @@ showOIAndII = input.bool(true, title="Show Outside Inside and Inside Inside Bars
 showHVAnomalies = input.bool(true, title="Show High Volume Anomalies")
 showLVAnomalies = input.bool(true, title="Show Low Volume Anomalies")
 volumeMetric = input.string("SMA", title="Acceptable Volume Metric", options = ['SMA', 'Median'])
-volumeSMALength = input.int(50, minval=10, maxval=500,title="Volume SMA Length")
-volumeMedianLength = input.int(50, minval=10, maxval=500, title="Volume Median Length (Only Regular Session Data)")
 acceptableVolumeThreshold = input(1.0, title="Acceptable Volume Threshold")
 highVolumeThreshold = input(2.0, title="High Volume Threshold")
+volumeSMALength = input.int(50, minval=10, maxval=500,title="Volume SMA Length")
+volumeMedianLength = input.int(50, minval=10, maxval=500, title="Volume Median Length")
+volumeMedianSessionData = input.string("Regular", title = "Volume Median Session Data", options = ['Regular', 'Extended'])
 atrLength = input(14, title="ATR Length")
 acceptableVolatilityThreshold = input(0.5, title="Acceptable Volatility Threshold")
 atrThreshold = input(1.5, title="Momentum Bar ATR Threshold")
@@ -27,8 +28,8 @@ plotPrevMonthHighLow = input.bool(true, title="Plot Previous Month High/Low")
 plotPrevWeekHighLow = input.bool(true, title="Plot Previous Week High/Low")
 plotPrevDayHighLow = input.bool(true, title="Plot Previous Day High/Low")
 plotOpeningPrint = input.bool(true, title="Plot Opening Print")
-highPriceLevelColor  = input(color.rgb(8, 153, 129, 30), title="High Price Level Color")
-lowPriceLevelColor  = input(color.rgb(242, 54, 69, 30), title ="Low Price Level Color")
+highPriceLevelColor  = input(color.rgb(8, 153, 129), title="High Price Level Color")
+lowPriceLevelColor  = input(color.rgb(242, 54, 69), title ="Low Price Level Color")
 openingPrintColor = input(color.rgb(243, 152, 15), title="Opening Print Color")
 
 // Auto hide some of the automatic levels
@@ -66,7 +67,7 @@ get_median(length) =>
         array.set(volumes, i, volume[i])
     array.median(volumes)
 
-var regularSessionTicker = ticker.new(syminfo.prefix, syminfo.tickerid, session.regular)
+var regularSessionTicker = ticker.new(syminfo.prefix, syminfo.tickerid, volumeMedianSessionData == "Regular" ? session.regular : session.extended)
 medianVolume = usingSMA ? 0 : request.security(regularSessionTicker, timeframe.period, get_median(volumeMedianLength))
 sufficientVolume = usingSMA ? volume > volumeSMA * acceptableVolumeThreshold : volume > medianVolume * acceptableVolumeThreshold
 highVolume = usingSMA ? volume > volumeSMA * highVolumeThreshold : volume > medianVolume * highVolumeThreshold
