@@ -16,7 +16,7 @@ acceptableVolumeThreshold = input(1.0, title="Acceptable Volume Threshold")
 highVolumeThreshold = input(2.0, title="High Volume Threshold")
 volumeSMALength = input.int(50, minval=10, maxval=500,title="Volume SMA Length")
 volumeMedianLength = input.int(50, minval=10, maxval=500, title="Volume Median Length")
-volumeMedianSessionData = input.string("Regular", title = "Volume Median Session Data", options = ['Regular', 'Extended'])
+volumeMedianSessionData = input.string("Extended", title = "Volume Median Session Data", options = ['Regular', 'Extended'])
 atrLength = input(14, title="ATR Length")
 acceptableVolatilityThreshold = input(0.5, title="Acceptable Volatility Threshold")
 atrThreshold = input(1.5, title="Momentum Bar ATR Threshold")
@@ -61,14 +61,27 @@ higherVolumeThanPrev = volume > volume[1]
 lowerVolumeThanPrev = volume < volume[1]
 
 // Volume median calculation
-get_median(length) =>
-    float[] volumes = array.new_float(length)
-    for i = 0 to length - 1
-        array.set(volumes, i, volume[i])
-    array.median(volumes)
+medianVolume = 0.0
+if not usingSMA
+    var float[] regularMarketVolume = array.new_float(volumeMedianLength)
+    var float[] extendedMarketVolume = array.new_float(volumeMedianLength)
 
-var regularSessionTicker = ticker.new(syminfo.prefix, syminfo.tickerid, volumeMedianSessionData == "Regular" ? session.regular : session.extended)
-medianVolume = usingSMA ? 0 : request.security(regularSessionTicker, timeframe.period, get_median(volumeMedianLength))
+    if volumeMedianSessionData == "Extended" and (session.ispremarket or session.ispostmarket)
+        if extendedMarketVolume.size() == volumeMedianLength
+            extendedMarketVolume.shift()
+        array.push(extendedMarketVolume, volume)
+    else if session.ismarket
+        if regularMarketVolume.size() == volumeMedianLength
+            regularMarketVolume.shift()
+        array.push(regularMarketVolume, volume)
+
+    if volumeMedianSessionData == "Regular"
+        medianVolume := array.median(regularMarketVolume)
+    else if volumeMedianSessionData == "Extended"
+        if session.ismarket
+            medianVolume := array.median(regularMarketVolume)
+        else
+            medianVolume := array.median(extendedMarketVolume)
 sufficientVolume = usingSMA ? volume > volumeSMA * acceptableVolumeThreshold : volume > medianVolume * acceptableVolumeThreshold
 highVolume = usingSMA ? volume > volumeSMA * highVolumeThreshold : volume > medianVolume * highVolumeThreshold
 
