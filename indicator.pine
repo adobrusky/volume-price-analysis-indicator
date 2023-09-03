@@ -17,6 +17,7 @@ highVolumeThreshold = input(2.0, title="High Volume Threshold")
 volumeSMALength = input.int(50, minval=10, maxval=500,title="Volume SMA Length")
 volumeMedianLength = input.int(50, minval=10, maxval=500, title="Volume Median Length")
 volumeMedianSessionData = input.string("Extended", title = "Volume Median Session Data", options = ['Regular', 'Extended'])
+futuresRegularSession = input("0830-1500", title = "Futures Regular Session")
 atrLength = input(14, title="ATR Length")
 acceptableVolatilityThreshold = input(0.5, title="Acceptable Volatility Threshold")
 atrThreshold = input(1.5, title="Momentum Bar ATR Threshold")
@@ -66,11 +67,13 @@ if not usingSMA
     var float[] regularMarketVolume = array.new_float(volumeMedianLength)
     var float[] extendedMarketVolume = array.new_float(volumeMedianLength)
 
-    if volumeMedianSessionData == "Extended" and (session.ispremarket or session.ispostmarket)
+    var bool isFuture = str.endswith(syminfo.ticker, "!") and syminfo.type == "futures"
+    bool isFutureRegularSession = not na(time(timeframe.period, futuresRegularSession))
+    if volumeMedianSessionData == "Extended" and (session.ispremarket or session.ispostmarket or (isFuture and not isFutureRegularSession))
         if extendedMarketVolume.size() == volumeMedianLength
             extendedMarketVolume.shift()
         array.push(extendedMarketVolume, volume)
-    else if session.ismarket
+    else if (session.ismarket and not isFuture) or (isFuture and isFutureRegularSession)
         if regularMarketVolume.size() == volumeMedianLength
             regularMarketVolume.shift()
         array.push(regularMarketVolume, volume)
@@ -78,7 +81,7 @@ if not usingSMA
     if volumeMedianSessionData == "Regular"
         medianVolume := array.median(regularMarketVolume)
     else if volumeMedianSessionData == "Extended"
-        if session.ismarket
+        if (session.ismarket and not isFuture) or (isFuture and isFutureRegularSession)
             medianVolume := array.median(regularMarketVolume)
         else
             medianVolume := array.median(extendedMarketVolume)
@@ -138,11 +141,11 @@ plotshape(bullishMomentumCandle and highVolume, style=shape.triangleup, location
 plotshape(bearishMomentumCandle and highVolume, style=shape.triangledown, location=location.abovebar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="M+")
 
 // Plot hammers and shooters
-plotshape(showHammersShooters and isHammer and not highVolume and not bullishVolumeAnomaly and not isDoubleInside and not isOutsideInside, style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="H")
-plotshape(showHammersShooters and isHammer and highVolume and not bullishVolumeAnomaly and not isDoubleInside and not isOutsideInside, style=shape.triangleup, location=location.belowbar, textcolor=color.rgb(255, 255, 255), color=color.rgb(211, 48, 176), text="H+")
+plotshape(showHammersShooters and isHammer and not highVolume and not bullishVolumeAnomaly and (not showOIAndII or (not isDoubleInside and not isOutsideInside)), style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="H")
+plotshape(showHammersShooters and isHammer and highVolume and not bullishVolumeAnomaly and (not showOIAndII or (not isDoubleInside and not isOutsideInside)), style=shape.triangleup, location=location.belowbar, textcolor=color.rgb(255, 255, 255), color=color.rgb(211, 48, 176), text="H+")
 
-plotshape(showHammersShooters and isHammer and not highVolume and bullishVolumeAnomaly and not isDoubleInside and not isOutsideInside, style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="HA")
-plotshape(showHammersShooters and isHammer and highVolume and bullishVolumeAnomaly and not isDoubleInside and not isOutsideInside, style=shape.triangleup, location=location.belowbar, textcolor=color.rgb(255, 255, 255), color=color.rgb(211, 48, 176), text="HA+")
+plotshape(showHammersShooters and isHammer and not highVolume and bullishVolumeAnomaly and (not showOIAndII or (not isDoubleInside and not isOutsideInside)), style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="HA")
+plotshape(showHammersShooters and isHammer and highVolume and bullishVolumeAnomaly and (not showOIAndII or (not isDoubleInside and not isOutsideInside)), style=shape.triangleup, location=location.belowbar, textcolor=color.rgb(255, 255, 255), color=color.rgb(211, 48, 176), text="HA+")
 
 plotshape(showHammersShooters and isShooter and not highVolume and not bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, color=color.rgb(255, 155, 93), textcolor=color.rgb(255, 255, 255), text="S")
 plotshape(showHammersShooters and isShooter and highVolume and not bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, textcolor=color.rgb(255, 255, 255), color=color.rgb(255, 155, 93), text="S+")
@@ -158,17 +161,17 @@ plotshape(showDojis and isDoji and not highVolume and higherVolumeThanPrev, styl
 plotshape(showDojis and isDoji and highVolume and higherVolumeThanPrev, style=shape.triangledown, location=location.abovebar, textcolor=color.rgb(255, 255, 255), color=color.rgb(201, 55, 55), text="DA+")
 
 // Plot inside outside inside and double inside bars
-plotshape(showOIAndII and isOutsideInside and not highVolume and not isHammer, style=shape.triangleup, location=location.belowbar, color=color.rgb(96, 201, 55), textcolor=color.rgb(255, 255, 255), text="OI")
-plotshape(showOIAndII and isOutsideInside and highVolume and not isHammer, style=shape.triangleup, location=location.belowbar, textcolor=color.rgb(255, 255, 255), color=color.rgb(96, 201, 55), text="OI+")
+plotshape(showOIAndII and isOutsideInside and not highVolume and (not showHammersShooters or (not isHammer)), style=shape.triangleup, location=location.belowbar, color=color.rgb(96, 201, 55), textcolor=color.rgb(255, 255, 255), text="OI")
+plotshape(showOIAndII and isOutsideInside and highVolume and (not showHammersShooters or (not isHammer)), style=shape.triangleup, location=location.belowbar, textcolor=color.rgb(255, 255, 255), color=color.rgb(96, 201, 55), text="OI+")
 
-plotshape(showOIAndII and isOutsideInside and not highVolume and isHammer, style=shape.triangleup, location=location.belowbar, color=color.rgb(96, 201, 55), textcolor=color.rgb(255, 255, 255), text="HOI")
-plotshape(showOIAndII and isOutsideInside and highVolume and isHammer, style=shape.triangleup, location=location.belowbar, textcolor=color.rgb(255, 255, 255), color=color.rgb(96, 201, 55), text="HOI+")
+plotshape(showOIAndII and showHammersShooters and isOutsideInside and not highVolume and isHammer, style=shape.triangleup, location=location.belowbar, color=color.rgb(96, 201, 55), textcolor=color.rgb(255, 255, 255), text="HOI")
+plotshape(showOIAndII and showHammersShooters and isOutsideInside and highVolume and isHammer, style=shape.triangleup, location=location.belowbar, textcolor=color.rgb(255, 255, 255), color=color.rgb(96, 201, 55), text="HOI+")
 
-plotshape(showOIAndII and isDoubleInside and not highVolume and not isHammer, style=shape.triangleup, location=location.belowbar, color=color.rgb(96, 201, 55), textcolor=color.rgb(255, 255, 255), text="II")
-plotshape(showOIAndII and isDoubleInside and highVolume and not isHammer, style=shape.triangleup, location=location.belowbar, textcolor=color.rgb(255, 255, 255), color=color.rgb(96, 201, 55), text="II+")
+plotshape(showOIAndII and isDoubleInside and not highVolume and (not showHammersShooters or (not isHammer)), style=shape.triangleup, location=location.belowbar, color=color.rgb(96, 201, 55), textcolor=color.rgb(255, 255, 255), text="II")
+plotshape(showOIAndII and isDoubleInside and highVolume and (not showHammersShooters or (not isHammer)), style=shape.triangleup, location=location.belowbar, textcolor=color.rgb(255, 255, 255), color=color.rgb(96, 201, 55), text="II+")
 
-plotshape(showOIAndII and isDoubleInside and not highVolume and isHammer, style=shape.triangleup, location=location.belowbar, color=color.rgb(96, 201, 55), textcolor=color.rgb(255, 255, 255), text="HII")
-plotshape(showOIAndII and isDoubleInside and highVolume and isHammer, style=shape.triangleup, location=location.belowbar, textcolor=color.rgb(255, 255, 255), color=color.rgb(96, 201, 55), text="HII+")
+plotshape(showOIAndII and showHammersShooters and isDoubleInside and not highVolume and isHammer, style=shape.triangleup, location=location.belowbar, color=color.rgb(96, 201, 55), textcolor=color.rgb(255, 255, 255), text="HII")
+plotshape(showOIAndII and showHammersShooters and isDoubleInside and highVolume and isHammer, style=shape.triangleup, location=location.belowbar, textcolor=color.rgb(255, 255, 255), color=color.rgb(96, 201, 55), text="HII+")
 
 // Plot volume anomalies
 plotshape(showHVAnomalies and bullishHighVolumeAnomaly and not isDoji and not isHammer and not isShooter and not highVolume, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A")
