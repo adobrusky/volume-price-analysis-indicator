@@ -24,7 +24,7 @@ atrThreshold = input(1.5, title="Momentum Bar ATR Threshold")
 hammerBodyToTotalRatio = input(2.0, title="Hammer/Shooter Long Wick to Body Ratio")
 upperWickToBodyRatio = input(1.0, title="Hammer/Shooter Short Wick to Body Ratio")
 dojiBodyToTotalRatio = input(0.1, title="Doji Body to High/Low Ratio")
-autoHideAutomaticLevels = input.bool(true, title="Hide Automatic Price Levels on Higher Timeframes")
+hideAutomaticLevelsHigherThan = input.timeframe("60", title = "Hide Automatic Price Levels Higher Than Timeframe")
 plotPrevMonthHighLow = input.bool(true, title="Plot Previous Month High/Low")
 plotPrevWeekHighLow = input.bool(true, title="Plot Previous Week High/Low")
 plotPrevDayHighLow = input.bool(true, title="Plot Previous Day High/Low")
@@ -33,26 +33,12 @@ highPriceLevelColor  = input(color.rgb(8, 153, 129), title="High Price Level Col
 lowPriceLevelColor  = input(color.rgb(242, 54, 69), title ="Low Price Level Color")
 openingPrintColor = input(color.rgb(243, 152, 15), title="Opening Print Color")
 
-// Auto hide some of the automatic levels
-weeklyOrHigherTimeframe = timeframe.ismonthly or timeframe.isweekly
-dailyOrHigherTimeframe = weeklyOrHigherTimeframe or timeframe.isdaily
+var bool hideAutomaticLevels = (timeframe.in_seconds(hideAutomaticLevelsHigherThan) / 60) < (timeframe.in_seconds() / 60)
 
-if timeframe.ismonthly or (autoHideAutomaticLevels and dailyOrHigherTimeframe)
+if hideAutomaticLevels
     plotPrevMonthHighLow := false
     plotPrevWeekHighLow := false
     plotPrevDayHighLow := false
-    plotOpeningPrint := false
-
-if weeklyOrHigherTimeframe
-    plotPrevWeekHighLow := false
-    plotPrevDayHighLow := false
-    plotOpeningPrint := false
-
-if dailyOrHigherTimeframe
-    plotPrevDayHighLow := false
-    plotOpeningPrint := false
-
-if not timeframe.isintraday
     plotOpeningPrint := false
 
 // Volume calculations
