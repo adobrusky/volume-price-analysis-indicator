@@ -28,7 +28,9 @@ hideAutomaticLevelsHigherThan = input.timeframe("60", title = "Hide Automatic Pr
 plotPrevMonthHighLow = input.bool(true, title="Plot Previous Month High/Low")
 plotPrevWeekHighLow = input.bool(true, title="Plot Previous Week High/Low")
 plotPrevDayHighLow = input.bool(true, title="Plot Previous Day High/Low")
-plotOpeningPrint = input.bool(true, title="Plot Opening Print")
+plotMonthlyOpeningPrint = input.bool(true, title="Plot Monthly Opening Print")
+plotWeeklyOpeningPrint = input.bool(true, title="Plot Weekly Opening Print")
+plotDailyOpeningPrint = input.bool(true, title="Plot Daily Opening Print")
 highPriceLevelColor  = input(color.rgb(8, 153, 129), title="High Price Level Color")
 lowPriceLevelColor  = input(color.rgb(242, 54, 69), title ="Low Price Level Color")
 openingPrintColor = input(color.rgb(243, 152, 15), title="Opening Print Color")
@@ -39,7 +41,9 @@ if hideAutomaticLevels
     plotPrevMonthHighLow := false
     plotPrevWeekHighLow := false
     plotPrevDayHighLow := false
-    plotOpeningPrint := false
+    plotMonthlyOpeningPrint := false
+    plotWeeklyOpeningPrint := false
+    plotDailyOpeningPrint := false
 
 // Volume calculations
 usingSMA = volumeMetric == "SMA"
@@ -115,16 +119,20 @@ prevWeekHigh = plotPrevWeekHighLow ? request.security(syminfo.tickerid, "W", hig
 prevWeekLow = plotPrevWeekHighLow ? request.security(syminfo.tickerid, "W", low[1], lookahead=barmerge.lookahead_on) : na
 prevDayHigh = plotPrevDayHighLow ? request.security(syminfo.tickerid, "D", high[1], lookahead=barmerge.lookahead_on) : na
 prevDayLow = plotPrevDayHighLow ? request.security(syminfo.tickerid, "D", low[1], lookahead=barmerge.lookahead_on) : na
-openingPrint = plotOpeningPrint ? request.security(syminfo.tickerid, "D", open, lookahead=barmerge.lookahead_on) : na
+monthlyOpeningPrint = plotMonthlyOpeningPrint ? request.security(syminfo.tickerid, "M", open, lookahead=barmerge.lookahead_on) : na
+weeklyOpeningPrint = plotWeeklyOpeningPrint ? request.security(syminfo.tickerid, "W", open, lookahead=barmerge.lookahead_on) : na
+dailyOpeningPrint = plotDailyOpeningPrint ? request.security(syminfo.tickerid, "D", open, lookahead=barmerge.lookahead_on) : na
 
-// Plot prev day, week, and month high/low and the opening print
+// Plot prev day, week, and month high/low and the monthly, weekly, and daily opening print
 plot(prevMonthHigh, style=plot.style_circles, color=highPriceLevelColor, linewidth=5, trackprice = true, show_last = 1, offset = -99999)
 plot(prevMonthLow, style=plot.style_circles, color=lowPriceLevelColor, linewidth=5, trackprice = true, show_last = 1, offset = -99999)
 plot(prevWeekHigh, style=plot.style_circles, color=highPriceLevelColor, linewidth=3, trackprice = true, show_last = 1, offset = -99999)
 plot(prevWeekLow, style=plot.style_circles, color=lowPriceLevelColor, linewidth=3, trackprice = true, show_last = 1, offset = -99999)
 plot(prevDayHigh, style=plot.style_circles, color=highPriceLevelColor, linewidth=2, trackprice = true, show_last = 1, offset = -99999)
 plot(prevDayLow, style=plot.style_circles, color=lowPriceLevelColor, linewidth=2, trackprice = true, show_last = 1, offset = -99999)
-plot(openingPrint, style=plot.style_circles, color=openingPrintColor, linewidth=2, trackprice = true, show_last = 1, offset = -99999)
+plot(monthlyOpeningPrint, style=plot.style_circles, color=openingPrintColor, linewidth=5, trackprice = true, show_last = 1, offset = -99999)
+plot(weeklyOpeningPrint, style=plot.style_circles, color=openingPrintColor, linewidth=3, trackprice = true, show_last = 1, offset = -99999)
+plot(dailyOpeningPrint, style=plot.style_circles, color=openingPrintColor, linewidth=2, trackprice = true, show_last = 1, offset = -99999)
 
 // Plot hammers
 plotshape(showHammers and isHammer and not highVolume and not bullishVolumeAnomaly and (not showOIAndII or (not isDoubleInside and not isOutsideInside)), style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="H")
