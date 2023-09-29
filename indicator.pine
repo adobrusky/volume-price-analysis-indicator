@@ -73,6 +73,7 @@ if not usingSMA
             medianVolume := array.median(extendedMarketVolume)
 sufficientVolume = usingSMA ? volume > volumeSMA * acceptableVolumeThreshold : volume > medianVolume * acceptableVolumeThreshold
 highVolume = usingSMA ? volume > volumeSMA * highVolumeThreshold : volume > medianVolume * highVolumeThreshold
+volumeLessThanMetric = usingSMA ? volume < volumeSMA : volume < medianVolume
 
 if na(sufficientVolume)
     sufficientVolume := true
@@ -102,8 +103,8 @@ bullishMomentumCandle = showMomentum and (na(volume) or higherVolumeThanPrev) an
 bearishMomentumCandle = showMomentum and (na(volume) or higherVolumeThanPrev) and redCandle and bodyGreaterThanMomentumATRThreshold and lowerWick < body and sufficientVolume
 bullishHighVolumeAnomaly = showHVAnomalies and redCandle and close[1] < open[1] and body < prevCandleBody and higherVolumeThanPrev and sufficientVolume and sufficientVolatility
 bearishHighVolumeAnomaly = showHVAnomalies and greenCandle and close[1] > open[1] and body < prevCandleBody and higherVolumeThanPrev and sufficientVolume and sufficientVolatility
-bullishLowVolumeAnomaly = showLVAnomalies and redCandle and body > prevCandleBody and bodyGreaterThanMomentumATRThreshold and lowerVolumeThanPrev and sufficientVolume and sufficientVolatility
-bearishLowVolumeAnomaly = showLVAnomalies and greenCandle and body > prevCandleBody and bodyGreaterThanMomentumATRThreshold and lowerVolumeThanPrev and sufficientVolume and sufficientVolatility
+bullishLowVolumeAnomaly = showLVAnomalies and volumeLessThanMetric and redCandle and bodyGreaterThanMomentumATRThreshold and lowerVolumeThanPrev and sufficientVolume and sufficientVolatility
+bearishLowVolumeAnomaly = showLVAnomalies and volumeLessThanMetric and greenCandle and bodyGreaterThanMomentumATRThreshold and lowerVolumeThanPrev and sufficientVolume and sufficientVolatility
 bullishVolumeAnomaly = bullishHighVolumeAnomaly or bullishLowVolumeAnomaly
 bearishVolumeAnomaly = bearishHighVolumeAnomaly or bearishLowVolumeAnomaly
 
