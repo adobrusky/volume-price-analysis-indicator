@@ -23,8 +23,8 @@ The VPA Indicator includes the following features:
 ### Automatic Price Levels
 
 - **Monthly**: The previous month's high is plotted as a thick green dotted line and the previous month's low is plotted as a thick red dotted line. The current monthly candle's opening print is plotted as a thick orange dotted line.
-- **Weekly**: The previous week's high is plotted as a less thick green dotted line and the previous week's low is plotted as a less thick red dotted line. The current weekly candle's opening print is plotted as a thick orange dotted line.
-- **Daily**: The previous day's high is plotted as a thin green dotted line and the previous day's low is plotted as a thin red dotted line. The current daily candle's opening print is plotted as a thick orange dotted line.
+- **Weekly**: The previous week's high is plotted as a less thick green dotted line and the previous week's low is plotted as a less thick red dotted line. The current weekly candle's opening print is plotted as a less thick orange dotted line.
+- **Daily**: The previous day's high is plotted as a thin green dotted line and the previous day's low is plotted as a thin red dotted line. The current daily candle's opening print is plotted as a thin orange dotted line.
 
 ## Configuration
 
