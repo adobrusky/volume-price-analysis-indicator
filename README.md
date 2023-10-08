@@ -8,7 +8,8 @@ The VPA Indicator includes the following features:
 
 ### Candlesticks
 
-- **Hammers and Shooters**: Identifies hammer and shooter candlesticks, which can indicate potential trend reversals. Hammer candles are indicated with an H and shooter candles are indicated with an S.
+- **Hammers**: Identifies hammer candlesticks, which can indicate potential trend reversals or continuation. Hammer candles are indicated with an H.
+- **Shooters**: Identifies shooter candlesticks, which can indicate potential trend reversals or continuation. Shooter candles are indicated with an S.
 - **Momentum Candles**: Identifies candles with significant price movement relative to Average True Range (ATR) accompanied by high volume, which may indicate potential strong market momentum. Momentum candles are indicated with an M.
 - **Dojis**: Recognizes doji candlestick patterns, which may signal a market reversal or pause. Doji candles are indicated with a D.
 - **Outside Inside Bars and Inside Inside**: Detects outside inside (OI) and inside inside (II) bars, which are patterns indicating potential continuation or reversal of trend.
@@ -21,19 +22,23 @@ The VPA Indicator includes the following features:
 
 ### Automatic Price Levels
 
-- **Monthly**: The previous month's high is plotted as a thick green dotted line and the previous month's low is plotted as a thick red dotted line.
-- **Weekly**: The previous week's high is plotted as a less thick green dotted line and the previous week's low is plotted as a less thick red dotted line.
-- **Daily**: The previous day's high is plotted as a thin green dotted line and the previous day's low is plotted as a thin red dotted line. The current daily candle's open is known as the opening print and it is plotted as a thin orange dotted line.
+- **Monthly**: The previous month's high is plotted as a thick green dotted line and the previous month's low is plotted as a thick red dotted line. The current monthly candle's opening print is plotted as a thick orange dotted line.
+- **Weekly**: The previous week's high is plotted as a less thick green dotted line and the previous week's low is plotted as a less thick red dotted line. The current weekly candle's opening print is plotted as a thick orange dotted line.
+- **Daily**: The previous day's high is plotted as a thin green dotted line and the previous day's low is plotted as a thin red dotted line. The current daily candle's opening print is plotted as a thick orange dotted line.
 
 ## Configuration
 
 The VPA Indicator offers customization options through input parameters. You can adjust the settings to match your trading preferences:
 
 - **Show/Hide Options**: Enable or disable the display of specific candlesticks, volume anomalies, and price levels.
-- **Volume SMA Length**: Set the length of the simple moving average (SMA) used for average volume calculations.
-- **Volume Thresholds**: Define acceptable and high volume thresholds as a percentage of the average volume. Indications of candlesticks and anomalies will not show on candles with below acceptable volume.
+- **Volume Thresholds**: Define acceptable and high volume thresholds as a percentage of the average volume. Indications of volume and price action will not show on candles with below acceptable volume.
+- **Volume Metric**: Choose "SMA" or "Median" for the volume metric.
+- **Volume Metric Length**: Set the length for the volume metric calculations.
+- **Volume Median Session Data**: Choose between "Regular" and "Extended" for the volume median session data.
+- **Futures Regular Session**: Specify the regular session time for futures. This is used when calculating the volume median.
 - **ATR Length and Threshold**: Configure the average true range (ATR) length and threshold for identifying momentum bars.
 - **Candlestick Ratios**: Adjust various ratios used to determine the characteristics of different candlestick patterns.
+- **Hide Automatic Price Levels Higher Than**: Choose a timeframe above which automatic price levels will be hidden. On higher timeframes, the chart can get cluttered with all the automatic price levels.
 
 ## How to Use
 
@@ -46,4 +51,4 @@ The VPA Indicator offers customization options through input parameters. You can
 
 ## Disclaimer
 
-Please note that the VPA Indicator is a tool designed to assist traders in identifying valuable price action and volume patterns. It should not be used as the sole basis for making trading decisions. Always use other technical and fundamental analysis before making any trading decisions.
+Please note that the VPA Indicator is a tool designed to assist traders in identifying valuable price action and volume data. It should not be used as the sole basis for making trading decisions. Always use other technical and fundamental analyses before making any trading decisions.
