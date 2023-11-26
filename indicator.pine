@@ -11,6 +11,7 @@ showDojis = input.bool(true, title="Show Dojis")
 showMomentum = input.bool(true, title="Show Momentum Bars")
 showHVAnomalies = input.bool(true, title="Show High Volume Anomalies")
 showLVAnomalies = input.bool(true, title="Show Low Volume Anomalies")
+showDailyGaps = input.bool(true, title="Show Daily Gaps")
 volumeMetric = input.string("Median", title="Acceptable Volume Metric", options = ['SMA', 'Median'])
 acceptableVolumeThreshold = input(0.75, title="Acceptable Volume Threshold")
 highVolumeThreshold = input(2.0, title="High Volume Threshold")
@@ -23,6 +24,7 @@ atrThreshold = input(1.5, title="Momentum Bar ATR Threshold")
 hammerBodyToTotalRatio = input(1.5, title="Hammer/Shooter Long Wick to Body Ratio")
 upperWickToBodyRatio = input(1.0, title="Hammer/Shooter Short Wick to Body Ratio")
 dojiBodyToTotalRatio = input(0.13, title="Doji Body to High/Low Ratio")
+gapLookback = input.int(200, title="Daily Gap Lookback")
 hideAutomaticLevelsHigherThan = input.timeframe("60", title = "Hide Automatic Price Levels Higher Than Timeframe")
 plotPrevMonthHighLow = input.bool(true, title="Plot Previous Month High/Low")
 plotPrevWeekHighLow = input.bool(true, title="Plot Previous Week High/Low")
@@ -33,6 +35,7 @@ plotDailyOpeningPrint = input.bool(true, title="Plot Daily Opening Print")
 highPriceLevelColor  = input(color.rgb(8, 153, 129), title="High Price Level Color")
 lowPriceLevelColor  = input(color.rgb(242, 54, 69), title ="Low Price Level Color")
 openingPrintColor = input(color.rgb(243, 152, 15), title="Opening Print Color")
+dailyGapColor = input(color.rgb(242, 54, 69, 95), title="Daily Gap Color")
 
 var bool hideAutomaticLevels = (timeframe.in_seconds(hideAutomaticLevelsHigherThan) / 60) < (timeframe.in_seconds() / 60)
 
@@ -119,6 +122,78 @@ prevDayLow = plotPrevDayHighLow ? request.security(syminfo.tickerid, "D", low[1]
 monthlyOpeningPrint = plotMonthlyOpeningPrint ? request.security(syminfo.tickerid, "M", open, lookahead=barmerge.lookahead_on) : na
 weeklyOpeningPrint = plotWeeklyOpeningPrint ? request.security(syminfo.tickerid, "W", open, lookahead=barmerge.lookahead_on) : na
 dailyOpeningPrint = plotDailyOpeningPrint ? request.security(syminfo.tickerid, "D", open, lookahead=barmerge.lookahead_on) : na
+
+getDailyGaps(lookBack) =>
+    var map<float, float> gapsDict = map.new<float, float>()
+    i = lookBack
+    var float atrSum = 0.0
+
+    while i > 0
+        dailyOpen = open[i]
+        dailyLow = low[i]
+        dailyHigh = high[i]
+        prevClose = close[i + 1]
+
+        if i < atrLength
+            // Calculate ATR components for each candle
+            tr = math.max(dailyHigh - dailyLow, math.max(math.abs(dailyHigh - prevClose), math.abs(dailyLow - prevClose)))
+            atrSum := atrSum + tr
+
+        // Check for gap
+        if dailyOpen != prevClose
+            gapsDict.put(dailyOpen, prevClose)
+
+        // Check if gaps are filled or partially filled
+        keysToUpdate = map.new<float, float>()
+        keysToRemove = array.new_float(0)
+        for [key, value] in gapsDict
+            gapHigh = math.max(key, value)
+            gapLow = math.min(key, value)
+            
+            // Check if gap is completely filled
+            if dailyLow <= gapLow and dailyHigh >= gapHigh
+                array.push(keysToRemove, key)
+            else
+                // Check for partial fill and update gap
+                if dailyLow > gapLow and dailyLow < gapHigh
+                    gapHigh := dailyLow
+                    keysToUpdate.put(gapHigh, gapLow)
+                    array.push(keysToRemove, key)
+                if dailyHigh < gapHigh and dailyHigh > gapLow
+                    gapLow := dailyHigh
+                    keysToUpdate.put(gapHigh, gapLow)
+                    array.push(keysToRemove, key)
+
+        // Remove completely filled gaps
+        for key in keysToRemove
+            gapsDict.remove(key)
+
+        // Add back partially filled gaps
+        for [key, value] in keysToUpdate
+            gapsDict.put(key, value)
+        i := i - 1
+
+    // Calculate average ATR
+    avgAtr = atrSum / atrLength
+
+    keysToRemove = array.new_float(0)
+    // Remove gaps smaller than 10% of the average ATR
+    for [key, value] in gapsDict
+        gapSize = math.abs(key - value)
+        if gapSize < avgAtr * 0.1
+            array.push(keysToRemove, key)
+
+    for key in keysToRemove
+        gapsDict.remove(key)
+
+    gapsDict
+
+gaps = request.security(syminfo.tickerid, "D", showDailyGaps and barstate.islast ? getDailyGaps(gapLookback) : map.new<float, float>(), lookahead=barmerge.lookahead_on)
+
+// Show Daily Gaps
+if showDailyGaps and barstate.islast
+    for [key, value] in gaps
+        box.new(bar_index - 1, key, bar_index, value, border_color=color.red, border_width=1, border_style=line.style_solid, extend=extend.right, xloc=xloc.bar_index, bgcolor=dailyGapColor)
 
 // Plot prev day, week, and month high/low and the monthly, weekly, and daily opening print
 plot(prevMonthHigh, style=plot.style_circles, color=highPriceLevelColor, linewidth=5, trackprice = true, show_last = 1, offset = -99999)
