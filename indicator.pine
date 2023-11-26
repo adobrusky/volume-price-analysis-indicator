@@ -35,7 +35,7 @@ plotDailyOpeningPrint = input.bool(true, title="Plot Daily Opening Print")
 highPriceLevelColor  = input(color.rgb(8, 153, 129), title="High Price Level Color")
 lowPriceLevelColor  = input(color.rgb(242, 54, 69), title ="Low Price Level Color")
 openingPrintColor = input(color.rgb(243, 152, 15), title="Opening Print Color")
-dailyGapColor = input(color.rgb(242, 54, 69, 95), title="Daily Gap Color")
+dailyGapColor = input(color.rgb(242, 54, 69, 98), title="Daily Gap Color")
 
 var bool hideAutomaticLevels = (timeframe.in_seconds(hideAutomaticLevelsHigherThan) / 60) < (timeframe.in_seconds() / 60)
 
@@ -128,7 +128,7 @@ getDailyGaps(lookBack) =>
     i = lookBack
     var float atrSum = 0.0
 
-    while i > 0
+    while i >= 0
         dailyOpen = open[i]
         dailyLow = low[i]
         dailyHigh = high[i]
@@ -177,7 +177,7 @@ getDailyGaps(lookBack) =>
     avgAtr = atrSum / atrLength
 
     keysToRemove = array.new_float(0)
-    // Remove gaps smaller than 10% of the average ATR
+    // Remove gaps smaller than 10% of the ATR
     for [key, value] in gapsDict
         gapSize = math.abs(key - value)
         if gapSize < avgAtr * 0.1
