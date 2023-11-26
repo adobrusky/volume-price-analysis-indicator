@@ -36,6 +36,7 @@ highPriceLevelColor  = input(color.rgb(8, 153, 129), title="High Price Level Col
 lowPriceLevelColor  = input(color.rgb(242, 54, 69), title ="Low Price Level Color")
 openingPrintColor = input(color.rgb(243, 152, 15), title="Opening Print Color")
 dailyGapColor = input(color.rgb(242, 54, 69, 98), title="Daily Gap Color")
+dailyGapBorderColor = input(color.rgb(242, 54, 69, 30), title="Daily Gap Border Color")
 
 var bool hideAutomaticLevels = (timeframe.in_seconds(hideAutomaticLevelsHigherThan) / 60) < (timeframe.in_seconds() / 60)
 
@@ -100,13 +101,13 @@ redCandle = close < open
 candleMidpoint = (high - (high - low) / 2)
 
 // Determine candle types
-isDoji = showDojis and body <= highLow * dojiBodyToTotalRatio and sufficientVolume and sufficientVolatility
-isHammer = showHammers and lowerWick >= body * hammerBodyToTotalRatio and bodyLow >= candleMidpoint and sufficientVolume and not isDoji and upperWick <= body * upperWickToBodyRatio and sufficientVolatility
-isShooter = showShooters and upperWick >= body * hammerBodyToTotalRatio and bodyHigh <= candleMidpoint and sufficientVolume and not isDoji and lowerWick <= body * upperWickToBodyRatio and sufficientVolatility
-bullishMomentumCandle = showMomentum and (na(volume) or higherVolumeThanPrev) and greenCandle and bodyGreaterThanMomentumATRThreshold and upperWick < body and sufficientVolume
-bearishMomentumCandle = showMomentum and (na(volume) or higherVolumeThanPrev) and redCandle and bodyGreaterThanMomentumATRThreshold and lowerWick < body and sufficientVolume
-bullishHighVolumeAnomaly = showHVAnomalies and redCandle and close[1] < open[1] and body < prevCandleBody and higherVolumeThanPrev and sufficientVolume and sufficientVolatility
-bearishHighVolumeAnomaly = showHVAnomalies and greenCandle and close[1] > open[1] and body < prevCandleBody and higherVolumeThanPrev and sufficientVolume and sufficientVolatility
+isDoji = showDojis and sufficientVolume and sufficientVolatility and body <= highLow * dojiBodyToTotalRatio
+isHammer = showHammers and sufficientVolume and sufficientVolatility and not isDoji and lowerWick >= body * hammerBodyToTotalRatio and bodyLow >= candleMidpoint and upperWick <= body * upperWickToBodyRatio
+isShooter = showShooters and sufficientVolume and sufficientVolatility and not isDoji and upperWick >= body * hammerBodyToTotalRatio and bodyHigh <= candleMidpoint and lowerWick <= body * upperWickToBodyRatio
+bullishMomentumCandle = showMomentum and sufficientVolume and (na(volume) or higherVolumeThanPrev) and greenCandle and bodyGreaterThanMomentumATRThreshold and upperWick < body
+bearishMomentumCandle = showMomentum and sufficientVolume and (na(volume) or higherVolumeThanPrev) and redCandle and bodyGreaterThanMomentumATRThreshold and lowerWick < body
+bullishHighVolumeAnomaly = showHVAnomalies and redCandle and higherVolumeThanPrev and sufficientVolume and sufficientVolatility and close[1] < open[1] and body < prevCandleBody
+bearishHighVolumeAnomaly = showHVAnomalies and greenCandle and higherVolumeThanPrev and sufficientVolume and sufficientVolatility and close[1] > open[1] and body < prevCandleBody
 bullishLowVolumeAnomaly = showLVAnomalies and volumeLessThanMetric and redCandle and bodyGreaterThanMomentumATRThreshold and lowerVolumeThanPrev and sufficientVolume and sufficientVolatility
 bearishLowVolumeAnomaly = showLVAnomalies and volumeLessThanMetric and greenCandle and bodyGreaterThanMomentumATRThreshold and lowerVolumeThanPrev and sufficientVolume and sufficientVolatility
 bullishVolumeAnomaly = bullishHighVolumeAnomaly or bullishLowVolumeAnomaly
@@ -124,9 +125,9 @@ weeklyOpeningPrint = plotWeeklyOpeningPrint ? request.security(syminfo.tickerid,
 dailyOpeningPrint = plotDailyOpeningPrint ? request.security(syminfo.tickerid, "D", open, lookahead=barmerge.lookahead_on) : na
 
 getDailyGaps(lookBack) =>
-    var map<float, float> gapsDict = map.new<float, float>()
+    map<int, string> gapsDict = map.new<int, string>()
     i = lookBack
-    var float atrSum = 0.0
+    float atrSum = 0.0
 
     while i >= 0
         dailyOpen = open[i]
@@ -134,22 +135,21 @@ getDailyGaps(lookBack) =>
         dailyHigh = high[i]
         prevClose = close[i + 1]
 
+         // Calculate ATR components for each candle
         if i < atrLength
-            // Calculate ATR components for each candle
             tr = math.max(dailyHigh - dailyLow, math.max(math.abs(dailyHigh - prevClose), math.abs(dailyLow - prevClose)))
             atrSum := atrSum + tr
 
         // Check for gap
         if dailyOpen != prevClose
-            gapsDict.put(dailyOpen, prevClose)
+            gapsDict.put(bar_index - i, str.tostring(math.max(dailyOpen, prevClose)) + "," + str.tostring(math.min(dailyOpen, prevClose)))
 
         // Check if gaps are filled or partially filled
-        keysToUpdate = map.new<float, float>()
-        keysToRemove = array.new_float(0)
+        keysToRemove = array.new_int(0)
         for [key, value] in gapsDict
-            gapHigh = math.max(key, value)
-            gapLow = math.min(key, value)
-            
+            gapHighAndLow = str.split(value, ",")
+            gapHigh = str.tonumber(array.get(gapHighAndLow, 0))
+            gapLow = str.tonumber(array.get(gapHighAndLow, 1))
             // Check if gap is completely filled
             if dailyLow <= gapLow and dailyHigh >= gapHigh
                 array.push(keysToRemove, key)
@@ -157,30 +157,25 @@ getDailyGaps(lookBack) =>
                 // Check for partial fill and update gap
                 if dailyLow > gapLow and dailyLow < gapHigh
                     gapHigh := dailyLow
-                    keysToUpdate.put(gapHigh, gapLow)
-                    array.push(keysToRemove, key)
+                    gapsDict.put(key, str.tostring(gapHigh) + "," + str.tostring(gapLow))
                 if dailyHigh < gapHigh and dailyHigh > gapLow
                     gapLow := dailyHigh
-                    keysToUpdate.put(gapHigh, gapLow)
-                    array.push(keysToRemove, key)
+                    gapsDict.put(key, str.tostring(gapHigh) + "," + str.tostring(gapLow))
 
         // Remove completely filled gaps
         for key in keysToRemove
             gapsDict.remove(key)
 
-        // Add back partially filled gaps
-        for [key, value] in keysToUpdate
-            gapsDict.put(key, value)
         i := i - 1
 
-    // Calculate average ATR
-    avgAtr = atrSum / atrLength
-
-    keysToRemove = array.new_float(0)
     // Remove gaps smaller than 10% of the ATR
+    keysToRemove = array.new_int(0)
+    atr = atrSum / atrLength
+
     for [key, value] in gapsDict
-        gapSize = math.abs(key - value)
-        if gapSize < avgAtr * 0.1
+        gapHighAndLow = str.split(value, ",")
+        gapSize = math.abs(str.tonumber(array.get(gapHighAndLow, 0)) - str.tonumber(array.get(gapHighAndLow, 1)))
+        if gapSize < atr * 0.1
             array.push(keysToRemove, key)
 
     for key in keysToRemove
@@ -188,12 +183,13 @@ getDailyGaps(lookBack) =>
 
     gapsDict
 
-gaps = request.security(syminfo.tickerid, "D", showDailyGaps and barstate.islast ? getDailyGaps(gapLookback) : map.new<float, float>(), lookahead=barmerge.lookahead_on)
+gaps = request.security(syminfo.tickerid, "D", showDailyGaps and barstate.islast ? getDailyGaps(gapLookback) : map.new<int, string>(), lookahead=barmerge.lookahead_on)
 
 // Show Daily Gaps
 if showDailyGaps and barstate.islast
     for [key, value] in gaps
-        box.new(bar_index - 1, key, bar_index, value, border_color=color.red, border_width=1, border_style=line.style_solid, extend=extend.right, xloc=xloc.bar_index, bgcolor=dailyGapColor)
+        gapHighAndLow = str.split(value, ",")
+        box.new(key, str.tonumber(array.get(gapHighAndLow, 0)), bar_index - 1, str.tonumber(array.get(gapHighAndLow, 1)), border_color=dailyGapBorderColor, border_width=1, border_style=line.style_solid, extend=extend.right, xloc=xloc.bar_index, bgcolor=dailyGapColor)
 
 // Plot prev day, week, and month high/low and the monthly, weekly, and daily opening print
 plot(prevMonthHigh, style=plot.style_circles, color=highPriceLevelColor, linewidth=5, trackprice = true, show_last = 1, offset = -99999)
