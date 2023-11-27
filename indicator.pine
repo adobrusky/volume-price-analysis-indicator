@@ -2,7 +2,7 @@
 // © adobrusky
 
 //@version=5
-indicator("Volume Price Analysis Indicator", shorttitle="VPA Indicator", overlay=true)
+indicator("Volume Price Analysis Indicator", shorttitle="VPA Indicator", overlay=true, max_bars_back=500)
 
 // User Inputs
 showHammers = input.bool(true, title="Show Hammers")
@@ -12,6 +12,7 @@ showMomentum = input.bool(true, title="Show Momentum Bars")
 showHVAnomalies = input.bool(true, title="Show High Volume Anomalies")
 showLVAnomalies = input.bool(true, title="Show Low Volume Anomalies")
 showDailyGaps = input.bool(true, title="Show Daily Gaps")
+// showIntradayGaps = input.bool(true, title="Show Intraday Gaps")
 volumeMetric = input.string("Median", title="Acceptable Volume Metric", options = ['SMA', 'Median'])
 acceptableVolumeThreshold = input(0.75, title="Acceptable Volume Threshold")
 highVolumeThreshold = input(2.0, title="High Volume Threshold")
@@ -24,7 +25,7 @@ atrThreshold = input(1.5, title="Momentum Bar ATR Threshold")
 hammerBodyToTotalRatio = input(1.5, title="Hammer/Shooter Long Wick to Body Ratio")
 upperWickToBodyRatio = input(1.0, title="Hammer/Shooter Short Wick to Body Ratio")
 dojiBodyToTotalRatio = input(0.13, title="Doji Body to High/Low Ratio")
-gapLookback = input.int(200, title="Daily Gap Lookback")
+gapLookback = input.int(200, minval=10, maxval=500, title="Gap Lookback")
 hideAutomaticLevelsHigherThan = input.timeframe("60", title = "Hide Automatic Price Levels Higher Than Timeframe")
 plotPrevMonthHighLow = input.bool(true, title="Plot Previous Month High/Low")
 plotPrevWeekHighLow = input.bool(true, title="Plot Previous Week High/Low")
@@ -37,6 +38,8 @@ lowPriceLevelColor  = input(color.rgb(242, 54, 69), title ="Low Price Level Colo
 openingPrintColor = input(color.rgb(243, 152, 15), title="Opening Print Color")
 dailyGapColor = input(color.rgb(242, 54, 69, 98), title="Daily Gap Color")
 dailyGapBorderColor = input(color.rgb(242, 54, 69, 30), title="Daily Gap Border Color")
+// intradayGapColor = input(color.rgb(242, 208, 54, 98), title="Intraday Gap Color")
+// intradayGapBorderColor = input(color.rgb(242, 208, 54, 30), title="Intraday Gap Border Color")
 
 var bool hideAutomaticLevels = (timeframe.in_seconds(hideAutomaticLevelsHigherThan) / 60) < (timeframe.in_seconds() / 60)
 
@@ -124,7 +127,7 @@ monthlyOpeningPrint = plotMonthlyOpeningPrint ? request.security(syminfo.tickeri
 weeklyOpeningPrint = plotWeeklyOpeningPrint ? request.security(syminfo.tickerid, "W", open, lookahead=barmerge.lookahead_on) : na
 dailyOpeningPrint = plotDailyOpeningPrint ? request.security(syminfo.tickerid, "D", open, lookahead=barmerge.lookahead_on) : na
 
-getDailyGaps(lookBack) =>
+getGaps(lookBack) =>
     map<int, string> gapsDict = map.new<int, string>()
     i = lookBack
     float atrSum = 0.0
@@ -135,32 +138,33 @@ getDailyGaps(lookBack) =>
         dailyHigh = high[i]
         prevClose = close[i + 1]
 
-         // Calculate ATR components for each candle
+        // Calculate ATR components for each candle
         if i < atrLength
             tr = math.max(dailyHigh - dailyLow, math.max(math.abs(dailyHigh - prevClose), math.abs(dailyLow - prevClose)))
             atrSum := atrSum + tr
 
         // Check for gap
         if dailyOpen != prevClose
-            gapsDict.put(bar_index - i, str.tostring(math.max(dailyOpen, prevClose)) + "," + str.tostring(math.min(dailyOpen, prevClose)))
+            gapsDict.put(time[i], str.tostring(math.max(dailyOpen, prevClose)) + "," + str.tostring(math.min(dailyOpen, prevClose)))
 
         // Check if gaps are filled or partially filled
         keysToRemove = array.new_int(0)
-        for [key, value] in gapsDict
-            gapHighAndLow = str.split(value, ",")
-            gapHigh = str.tonumber(array.get(gapHighAndLow, 0))
-            gapLow = str.tonumber(array.get(gapHighAndLow, 1))
-            // Check if gap is completely filled
-            if dailyLow <= gapLow and dailyHigh >= gapHigh
-                array.push(keysToRemove, key)
-            else
-                // Check for partial fill and update gap
-                if dailyLow > gapLow and dailyLow < gapHigh
-                    gapHigh := dailyLow
-                    gapsDict.put(key, str.tostring(gapHigh) + "," + str.tostring(gapLow))
-                if dailyHigh < gapHigh and dailyHigh > gapLow
-                    gapLow := dailyHigh
-                    gapsDict.put(key, str.tostring(gapHigh) + "," + str.tostring(gapLow))
+        if i > 0
+            for [key, value] in gapsDict
+                gapHighAndLow = str.split(value, ",")
+                gapHigh = str.tonumber(array.get(gapHighAndLow, 0))
+                gapLow = str.tonumber(array.get(gapHighAndLow, 1))
+                // Check if gap is completely filled
+                if dailyLow <= gapLow and dailyHigh >= gapHigh
+                    array.push(keysToRemove, key)
+                else
+                    // Check for partial fill and update gap
+                    if dailyLow > gapLow and dailyLow < gapHigh
+                        gapHigh := dailyLow
+                        gapsDict.put(key, str.tostring(gapHigh) + "," + str.tostring(gapLow))
+                    if dailyHigh < gapHigh and dailyHigh > gapLow
+                        gapLow := dailyHigh
+                        gapsDict.put(key, str.tostring(gapHigh) + "," + str.tostring(gapLow))
 
         // Remove completely filled gaps
         for key in keysToRemove
@@ -183,13 +187,31 @@ getDailyGaps(lookBack) =>
 
     gapsDict
 
-gaps = request.security(syminfo.tickerid, "D", showDailyGaps and barstate.islast ? getDailyGaps(gapLookback) : map.new<int, string>(), lookahead=barmerge.lookahead_on)
-
 // Show Daily Gaps
-if showDailyGaps and barstate.islast
-    for [key, value] in gaps
+var bool executedDailyGapLogic = false
+dailyGaps = request.security(syminfo.tickerid, "D", showDailyGaps and not executedDailyGapLogic and barstate.islast ? getGaps(gapLookback) : map.new<int, string>(), lookahead=barmerge.lookahead_on)
+if showDailyGaps and not executedDailyGapLogic and barstate.islast
+    for [key, value] in dailyGaps
         gapHighAndLow = str.split(value, ",")
-        box.new(key, str.tonumber(array.get(gapHighAndLow, 0)), bar_index - 1, str.tonumber(array.get(gapHighAndLow, 1)), border_color=dailyGapBorderColor, border_width=1, border_style=line.style_solid, extend=extend.right, xloc=xloc.bar_index, bgcolor=dailyGapColor)
+        box.new(key, str.tonumber(array.get(gapHighAndLow, 0)), time, str.tonumber(array.get(gapHighAndLow, 1)), border_color=dailyGapBorderColor, border_width=1, border_style=line.style_solid, extend=extend.right, xloc=xloc.bar_time, bgcolor=dailyGapColor)
+    executedDailyGapLogic := true
+
+// Show Intraday Gaps
+// var box[] boxIds = array.new_box()
+
+// clearBoxes() =>
+//     for id in boxIds
+//         if not na(id)
+//             box.delete(id)
+//     array.clear(boxIds)
+
+// if showIntradayGaps and barstate.islast and timeframe.isintraday
+//     intradayGaps = getGaps(gapLookback)
+//     clearBoxes()
+//     for [key, value] in intradayGaps
+//         gapHighAndLow = str.split(value, ",")
+//         boxId = box.new(key, str.tonumber(array.get(gapHighAndLow, 0)), bar_index - 1, str.tonumber(array.get(gapHighAndLow, 1)), border_color=intradayGapBorderColor, border_width=1, border_style=line.style_solid, extend=extend.right, xloc=xloc.bar_index, bgcolor=intradayGapColor)
+//         array.push(boxIds, boxId)
 
 // Plot prev day, week, and month high/low and the monthly, weekly, and daily opening print
 plot(prevMonthHigh, style=plot.style_circles, color=highPriceLevelColor, linewidth=5, trackprice = true, show_last = 1, offset = -99999)
