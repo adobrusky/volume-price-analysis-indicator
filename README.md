@@ -12,7 +12,6 @@ The VPA Indicator includes the following features:
 - **Shooters**: Identifies shooter candlesticks, which can indicate potential trend reversals or continuation. Shooter candles are indicated with an S.
 - **Momentum Candles**: Identifies candles with significant price movement relative to Average True Range (ATR) accompanied by high volume, which may indicate potential strong market momentum. Momentum candles are indicated with an M.
 - **Dojis**: Recognizes doji candlestick patterns, which may signal a market reversal or pause. Doji candles are indicated with a D.
-- **Outside Inside Bars and Inside Inside**: Detects outside inside (OI) and inside inside (II) bars, which are patterns indicating potential continuation or reversal of trend.
 
 ### Volume Conditions
 
@@ -25,6 +24,10 @@ The VPA Indicator includes the following features:
 - **Monthly**: The previous month's high is plotted as a thick green dotted line and the previous month's low is plotted as a thick red dotted line. The current monthly candle's opening print is plotted as a thick orange dotted line.
 - **Weekly**: The previous week's high is plotted as a less thick green dotted line and the previous week's low is plotted as a less thick red dotted line. The current weekly candle's opening print is plotted as a less thick orange dotted line.
 - **Daily**: The previous day's high is plotted as a thin green dotted line and the previous day's low is plotted as a thin red dotted line. The current daily candle's opening print is plotted as a thin orange dotted line.
+
+### Automatic Gap Zones
+
+- **Daily**: Gaps within the gap lookback length on the daily chart are highlighted as a translucent red box.
 
 ## Configuration
 
