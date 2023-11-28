@@ -41,6 +41,7 @@ The VPA Indicator offers customization options through input parameters. You can
 - **Futures Regular Session**: Specify the regular session time for futures. This is used when calculating the volume median.
 - **ATR Length and Threshold**: Configure the average true range (ATR) length and threshold for identifying momentum bars.
 - **Candlestick Ratios**: Adjust various ratios used to determine the characteristics of different candlestick patterns.
+- **Gap Lookback**: Adjust the lookback length for finding gaps.
 - **Hide Automatic Price Levels Higher Than**: Choose a timeframe above which automatic price levels will be hidden. On higher timeframes, the chart can get cluttered with all the automatic price levels.
 
 ## How to Use
