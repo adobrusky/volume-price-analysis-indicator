@@ -38,6 +38,7 @@ lowPriceLevelColor  = input(color.rgb(242, 54, 69), title ="Low Price Level Colo
 openingPrintColor = input(color.rgb(243, 152, 15), title="Opening Print Color")
 dailyGapColor = input(color.rgb(242, 54, 69, 98), title="Daily Gap Color")
 dailyGapBorderColor = input(color.rgb(242, 54, 69, 30), title="Daily Gap Border Color")
+dailyGapBorderWidth = input(3, title="Daily Gap Border Width")
 // intradayGapColor = input(color.rgb(242, 208, 54, 98), title="Intraday Gap Color")
 // intradayGapBorderColor = input(color.rgb(242, 208, 54, 30), title="Intraday Gap Border Color")
 
@@ -193,7 +194,7 @@ dailyGaps = request.security(syminfo.tickerid, "D", showDailyGaps and not execut
 if showDailyGaps and not executedDailyGapLogic and barstate.islast
     for [key, value] in dailyGaps
         gapHighAndLow = str.split(value, ",")
-        box.new(key, str.tonumber(array.get(gapHighAndLow, 0)), time, str.tonumber(array.get(gapHighAndLow, 1)), border_color=dailyGapBorderColor, border_width=1, border_style=line.style_solid, extend=extend.right, xloc=xloc.bar_time, bgcolor=dailyGapColor)
+        box.new(key, str.tonumber(array.get(gapHighAndLow, 0)), time, str.tonumber(array.get(gapHighAndLow, 1)), border_color=dailyGapBorderColor, border_width=dailyGapBorderWidth, border_style=line.style_solid, extend=extend.right, xloc=xloc.bar_time, bgcolor=dailyGapColor)
     executedDailyGapLogic := true
 
 // Show Intraday Gaps
