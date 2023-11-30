@@ -117,17 +117,6 @@ bearishLowVolumeAnomaly = showLVAnomalies and volumeLessThanMetric and greenCand
 bullishVolumeAnomaly = bullishHighVolumeAnomaly or bullishLowVolumeAnomaly
 bearishVolumeAnomaly = bearishHighVolumeAnomaly or bearishLowVolumeAnomaly
 
-// Pull in previous day, week, and month high/low
-prevMonthHigh = plotPrevMonthHighLow ? request.security(syminfo.tickerid, "M", high[1], lookahead=barmerge.lookahead_on) : na
-prevMonthLow = plotPrevMonthHighLow ? request.security(syminfo.tickerid, "M", low[1], lookahead=barmerge.lookahead_on) : na
-prevWeekHigh = plotPrevWeekHighLow ? request.security(syminfo.tickerid, "W", high[1], lookahead=barmerge.lookahead_on) : na
-prevWeekLow = plotPrevWeekHighLow ? request.security(syminfo.tickerid, "W", low[1], lookahead=barmerge.lookahead_on) : na
-prevDayHigh = plotPrevDayHighLow ? request.security(syminfo.tickerid, "D", high[1], lookahead=barmerge.lookahead_on) : na
-prevDayLow = plotPrevDayHighLow ? request.security(syminfo.tickerid, "D", low[1], lookahead=barmerge.lookahead_on) : na
-monthlyOpeningPrint = plotMonthlyOpeningPrint ? request.security(syminfo.tickerid, "M", open, lookahead=barmerge.lookahead_on) : na
-weeklyOpeningPrint = plotWeeklyOpeningPrint ? request.security(syminfo.tickerid, "W", open, lookahead=barmerge.lookahead_on) : na
-dailyOpeningPrint = plotDailyOpeningPrint ? request.security(syminfo.tickerid, "D", open, lookahead=barmerge.lookahead_on) : na
-
 getGaps(lookBack) =>
     map<int, string> gapsDict = map.new<int, string>()
     i = lookBack
@@ -189,14 +178,33 @@ getGaps(lookBack) =>
     gapsDict
 
 // Show Daily Gaps
-var bool executedDailyGapLogic = false
-dailyGaps = request.security(syminfo.tickerid, "D", showDailyGaps and not executedDailyGapLogic and barstate.islast ? getGaps(gapLookback) : map.new<int, string>(), lookahead=barmerge.lookahead_on)
-if showDailyGaps and not executedDailyGapLogic and barstate.islast
-    singleBar = ta.change(time(timeframe.period))
-    for [key, value] in dailyGaps
-        gapHighAndLow = str.split(value, ",")
-        box.new(key, str.tonumber(array.get(gapHighAndLow, 0)), time - singleBar, str.tonumber(array.get(gapHighAndLow, 1)), border_color=dailyGapBorderColor, border_width=dailyGapBorderWidth, border_style=line.style_solid, extend=extend.right, xloc=xloc.bar_time, bgcolor=dailyGapColor)
-    executedDailyGapLogic := true
+var bool executedDailyLogic = false
+var bool prevMarketSession = session.ismarket
+
+if not (session.ismarket and prevMarketSession)
+    executedDailyLogic := false
+
+// Pull in previous day, week, and month high/low
+prevMonthHigh = barstate.islast and not executedDailyLogic and plotPrevMonthHighLow ? request.security(syminfo.tickerid, "M", high[1], lookahead=barmerge.lookahead_on) : na
+prevMonthLow = barstate.islast and not executedDailyLogic and plotPrevMonthHighLow ? request.security(syminfo.tickerid, "M", low[1], lookahead=barmerge.lookahead_on) : na
+prevWeekHigh = barstate.islast and not executedDailyLogic and plotPrevWeekHighLow ? request.security(syminfo.tickerid, "W", high[1], lookahead=barmerge.lookahead_on) : na
+prevWeekLow = barstate.islast and not executedDailyLogic and plotPrevWeekHighLow ? request.security(syminfo.tickerid, "W", low[1], lookahead=barmerge.lookahead_on) : na
+prevDayHigh = barstate.islast and not executedDailyLogic and plotPrevDayHighLow ? request.security(syminfo.tickerid, "D", high[1], lookahead=barmerge.lookahead_on) : na
+prevDayLow = barstate.islast and not executedDailyLogic and plotPrevDayHighLow ? request.security(syminfo.tickerid, "D", low[1], lookahead=barmerge.lookahead_on) : na
+monthlyOpeningPrint = barstate.islast and not executedDailyLogic and plotMonthlyOpeningPrint ? request.security(syminfo.tickerid, "M", open, lookahead=barmerge.lookahead_on) : na
+weeklyOpeningPrint = barstate.islast and not executedDailyLogic and plotWeeklyOpeningPrint ? request.security(syminfo.tickerid, "W", open, lookahead=barmerge.lookahead_on) : na
+dailyOpeningPrint = barstate.islast and not executedDailyLogic and plotDailyOpeningPrint ? request.security(syminfo.tickerid, "D", open, lookahead=barmerge.lookahead_on) : na
+
+dailyGaps = request.security(syminfo.tickerid, "D", barstate.islast and showDailyGaps and not executedDailyLogic ? getGaps(gapLookback) : map.new<int, string>(), lookahead=barmerge.lookahead_on)
+if barstate.islast and not executedDailyLogic
+    if showDailyGaps
+        singleBar = ta.change(time(timeframe.period))
+        for [key, value] in dailyGaps
+            gapHighAndLow = str.split(value, ",")
+            box.new(key, str.tonumber(array.get(gapHighAndLow, 0)), time - singleBar, str.tonumber(array.get(gapHighAndLow, 1)), border_color=dailyGapBorderColor, border_width=dailyGapBorderWidth, border_style=line.style_solid, extend=extend.right, xloc=xloc.bar_time, bgcolor=dailyGapColor)
+        executedDailyLogic := true
+
+prevMarketSession := session.ismarket
 
 // Show Intraday Gaps
 // var box[] boxIds = array.new_box()
