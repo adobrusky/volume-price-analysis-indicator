@@ -36,8 +36,8 @@ plotDailyOpeningPrint = input.bool(true, title="Plot Daily Opening Print")
 highPriceLevelColor  = input(color.rgb(8, 153, 129), title="High Price Level Color")
 lowPriceLevelColor  = input(color.rgb(242, 54, 69), title ="Low Price Level Color")
 openingPrintColor = input(color.rgb(243, 152, 15), title="Opening Print Color")
-dailyGapColor = input(color.rgb(242, 54, 69, 98), title="Daily Gap Color")
-dailyGapBorderColor = input(color.rgb(242, 54, 69, 30), title="Daily Gap Border Color")
+dailyGapColor = input(color.rgb(255, 255, 255, 98), title="Daily Gap Color")
+dailyGapBorderColor = input(color.rgb(255, 255, 255, 30), title="Daily Gap Border Color")
 dailyGapBorderWidth = input(3, title="Daily Gap Border Width")
 // intradayGapColor = input(color.rgb(242, 208, 54, 98), title="Intraday Gap Color")
 // intradayGapBorderColor = input(color.rgb(242, 208, 54, 30), title="Intraday Gap Border Color")
@@ -150,7 +150,7 @@ getGaps(lookBack) =>
 
         // Check if gaps are filled or partially filled
         keysToRemove = array.new_int(0)
-        if i > 0
+        if not barstate.isrealtime[i]
             for [key, value] in gapsDict
                 gapHighAndLow = str.split(value, ",")
                 gapHigh = str.tonumber(array.get(gapHighAndLow, 0))
@@ -192,9 +192,10 @@ getGaps(lookBack) =>
 var bool executedDailyGapLogic = false
 dailyGaps = request.security(syminfo.tickerid, "D", showDailyGaps and not executedDailyGapLogic and barstate.islast ? getGaps(gapLookback) : map.new<int, string>(), lookahead=barmerge.lookahead_on)
 if showDailyGaps and not executedDailyGapLogic and barstate.islast
+    singleBar = ta.change(time(timeframe.period))
     for [key, value] in dailyGaps
         gapHighAndLow = str.split(value, ",")
-        box.new(key, str.tonumber(array.get(gapHighAndLow, 0)), time, str.tonumber(array.get(gapHighAndLow, 1)), border_color=dailyGapBorderColor, border_width=dailyGapBorderWidth, border_style=line.style_solid, extend=extend.right, xloc=xloc.bar_time, bgcolor=dailyGapColor)
+        box.new(key, str.tonumber(array.get(gapHighAndLow, 0)), time - singleBar, str.tonumber(array.get(gapHighAndLow, 1)), border_color=dailyGapBorderColor, border_width=dailyGapBorderWidth, border_style=line.style_solid, extend=extend.right, xloc=xloc.bar_time, bgcolor=dailyGapColor)
     executedDailyGapLogic := true
 
 // Show Intraday Gaps
