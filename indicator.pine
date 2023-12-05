@@ -181,7 +181,7 @@ getGaps(lookBack) =>
 var bool executedDailyLogic = false
 var bool prevMarketSession = session.ismarket
 
-if not (session.ismarket and prevMarketSession)
+if barstate.islast and not (session.ismarket and prevMarketSession)
     executedDailyLogic := false
 
 // Pull in previous day, week, and month high/low
@@ -196,7 +196,7 @@ weeklyOpeningPrint = barstate.islast and not executedDailyLogic and plotWeeklyOp
 dailyOpeningPrint = barstate.islast and not executedDailyLogic and plotDailyOpeningPrint ? request.security(syminfo.tickerid, "D", open, lookahead=barmerge.lookahead_on) : na
 
 dailyGaps = request.security(syminfo.tickerid, "D", barstate.islast and showDailyGaps and not executedDailyLogic ? getGaps(gapLookback) : map.new<int, string>(), lookahead=barmerge.lookahead_on)
-if barstate.islast and not executedDailyLogic
+if barstate.islast and not executedDailyLogic and (timeframe.isintraday or timeframe.isdaily)
     if showDailyGaps
         singleBar = ta.change(time(timeframe.period))
         for [key, value] in dailyGaps
