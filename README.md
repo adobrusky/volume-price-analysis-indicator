@@ -1,6 +1,6 @@
 # VPA Indicator
 
-The VPA Indicator is a Pine Script indicator designed to assist traders in identifying valuable Volume Price Analysis (VPA) information on price charts. This indicator aims to highlight candlesticks, volume conditions, and price levels that can provide insights into potential market direction.
+The VPA Indicator is a Pine Script indicator designed to assist traders in identifying valuable Volume Price Analysis (VPA) information on price charts. This indicator highlights candlesticks, volume conditions, and price levels that can provide insights into potential market direction.
 
 ## Features
 
@@ -15,9 +15,12 @@ The VPA Indicator includes the following features:
 
 ### Volume Conditions
 
-- **High Volume**: Highlights candles with unusually high trading volume compared to the average volume. A candlestick pattern that has high volume is indicated with a +.
+- **High Volume**: Highlights candles with unusually high trading volume compared to the average volume. A candlestick pattern that has a high volume is indicated with a +.
 - **High Volume Anomalies**: Identifies volume anomalies, where price movements are slowing and volume is increasing, which may signal a decrease in momentum. Volume anomalies are indicated with an A.
 - **Low Volume Anomalies**: Identifies volume anomalies, where price movements are increasing, greater than ATR * ATR Threshold, and volume is decreasing, which may signal a trap. Volume anomalies are indicated with an A.
+
+Below is a screenshot of the volume and price action indications on the SPY 5-minute chart:
+![Volume and price action indications](https://i.imgur.com/CC0DK1K.png)
 
 ### Automatic Price Levels
 
@@ -25,9 +28,12 @@ The VPA Indicator includes the following features:
 - **Weekly**: The previous week's high is plotted as a less thick green dotted line and the previous week's low is plotted as a less thick red dotted line. The current weekly candle's opening print is plotted as a less thick orange dotted line.
 - **Daily**: The previous day's high is plotted as a thin green dotted line and the previous day's low is plotted as a thin red dotted line. The current daily candle's opening print is plotted as a thin orange dotted line.
 
-### Automatic Gap Zones
+### Automatic Gaps
 
-- **Daily**: Gaps within the gap lookback length on the daily chart are highlighted as a translucent red box.
+- **Daily**: Gaps within the gap lookback length on the daily chart are highlighted as a translucent white box.
+
+Below is a screenshot of the automatic levels and gaps on the SPY 5-minute chart:
+![Automatic levels](https://i.imgur.com/zuBadec.png)
 
 ## Configuration
 
@@ -42,7 +48,7 @@ The VPA Indicator offers customization options through input parameters. You can
 - **ATR Length and Threshold**: Configure the average true range (ATR) length and threshold for identifying momentum bars.
 - **Candlestick Ratios**: Adjust various ratios used to determine the characteristics of different candlestick patterns.
 - **Gap Lookback**: Adjust the lookback length for finding gaps.
-- **Hide Automatic Price Levels Higher Than**: Choose a timeframe above which automatic price levels will be hidden. On higher timeframes, the chart can get cluttered with all the automatic price levels.
+- **Hide Automatic Price Levels Higher Than**: Choose a timeframe above which automatic price levels will be hidden. The chart can get cluttered with all the automatic price levels on higher timeframes.
 
 ## How to Use
 
@@ -51,8 +57,8 @@ The VPA Indicator offers customization options through input parameters. You can
 3. Click on the "Pine Script" tab, paste the code into the editor, and save the script.
 4. Apply the VPA Indicator to your chart by selecting it from the list of available indicators.
 5. Configure the indicator's settings according to your preferences.
-6. Observe the chart for highlighted candlestick patterns, volume conditions, and price levels to assist in your trading decisions.
+6. Observe the chart for highlighted candlestick patterns, volume conditions, and price levels to assist in trading decisions.
 
 ## Disclaimer
 
-Please note that the VPA Indicator is a tool designed to assist traders in identifying valuable price action and volume data. It should not be used as the sole basis for making trading decisions. Always use other technical and fundamental analyses before making any trading decisions.
+Please note that the VPA Indicator is a tool designed to assist traders in identifying price action and volume data. It should not be used as the sole basis for making trading decisions. Always use other technical and fundamental analyses before making any trading decisions.
