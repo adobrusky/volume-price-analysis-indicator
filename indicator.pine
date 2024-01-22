@@ -218,40 +218,52 @@ clearBoxes() =>
     array.clear(boxIds)
 
 // Calculate daily pivot levels
+dailySR1 = (prevDayHigh - prevDayLow) * 0.382
+dailySR2 = (prevDayHigh - prevDayLow) * 0.618
+dailySR3 = prevDayHigh - prevDayLow
 dailyPivotPP = barstate.islast and not executedDailyLogic and plotDailyPivotLevels ? (prevDayHigh + prevDayLow + prevDayClose) / 3 : na
-dailyPivotR1 = barstate.islast and not executedDailyLogic and plotDailyPivotLevels ? dailyPivotPP + (prevDayHigh - prevDayLow) * 0.382 : na
-dailyPivotS1 = barstate.islast and not executedDailyLogic and plotDailyPivotLevels ? dailyPivotPP - (prevDayHigh - prevDayLow) * 0.382 : na
-dailyPivotR2 = barstate.islast and not executedDailyLogic and plotDailyPivotLevels ? dailyPivotPP + (prevDayHigh - prevDayLow) * 0.618 : na
-dailyPivotS2 = barstate.islast and not executedDailyLogic and plotDailyPivotLevels ? dailyPivotPP - (prevDayHigh - prevDayLow) * 0.618 : na
-dailyPivotR3 = barstate.islast and not executedDailyLogic and plotDailyPivotLevels ? dailyPivotPP + (prevDayHigh - prevDayLow) : na
-dailyPivotS3 = barstate.islast and not executedDailyLogic and plotDailyPivotLevels ? dailyPivotPP - (prevDayHigh - prevDayLow) : na
+dailyPivotR1 = barstate.islast and not executedDailyLogic and plotDailyPivotLevels ? dailyPivotPP + dailySR1 : na
+dailyPivotS1 = barstate.islast and not executedDailyLogic and plotDailyPivotLevels ? dailyPivotPP - dailySR1 : na
+dailyPivotR2 = barstate.islast and not executedDailyLogic and plotDailyPivotLevels ? dailyPivotPP + dailySR2 : na
+dailyPivotS2 = barstate.islast and not executedDailyLogic and plotDailyPivotLevels ? dailyPivotPP - dailySR2 : na
+dailyPivotR3 = barstate.islast and not executedDailyLogic and plotDailyPivotLevels ? dailyPivotPP + dailySR3 : na
+dailyPivotS3 = barstate.islast and not executedDailyLogic and plotDailyPivotLevels ? dailyPivotPP - dailySR3 : na
 
 // Calculate weeekly pivot levels
+weeklySR1 = (prevWeekHigh - prevWeekLow) * 0.382
+weeklySR2 = (prevWeekHigh - prevWeekLow) * 0.618
+weeklySR3 = prevWeekHigh - prevWeekLow
 weeklyPivotPP = barstate.islast and not executedDailyLogic and plotWeeklyPivotLevels ? (prevWeekHigh + prevWeekLow + prevWeekClose) / 3 : na
-weeklyPivotR1 = barstate.islast and not executedDailyLogic and plotWeeklyPivotLevels ? weeklyPivotPP + (prevWeekHigh - prevWeekLow) * 0.382 : na
-weeklyPivotS1 = barstate.islast and not executedDailyLogic and plotWeeklyPivotLevels ? weeklyPivotPP - (prevWeekHigh - prevWeekLow) * 0.382 : na
-weeklyPivotR2 = barstate.islast and not executedDailyLogic and plotWeeklyPivotLevels ? weeklyPivotPP + (prevWeekHigh - prevWeekLow) * 0.618 : na
-weeklyPivotS2 = barstate.islast and not executedDailyLogic and plotWeeklyPivotLevels ? weeklyPivotPP - (prevWeekHigh - prevWeekLow) * 0.618 : na
-weeklyPivotR3 = barstate.islast and not executedDailyLogic and plotWeeklyPivotLevels ? weeklyPivotPP + (prevWeekHigh - prevWeekLow) : na
-weeklyPivotS3 = barstate.islast and not executedDailyLogic and plotWeeklyPivotLevels ? weeklyPivotPP - (prevWeekHigh - prevWeekLow) : na
+weeklyPivotR1 = barstate.islast and not executedDailyLogic and plotWeeklyPivotLevels ? weeklyPivotPP + weeklySR1 : na
+weeklyPivotS1 = barstate.islast and not executedDailyLogic and plotWeeklyPivotLevels ? weeklyPivotPP - weeklySR1 : na
+weeklyPivotR2 = barstate.islast and not executedDailyLogic and plotWeeklyPivotLevels ? weeklyPivotPP + weeklySR2 : na
+weeklyPivotS2 = barstate.islast and not executedDailyLogic and plotWeeklyPivotLevels ? weeklyPivotPP - weeklySR2 : na
+weeklyPivotR3 = barstate.islast and not executedDailyLogic and plotWeeklyPivotLevels ? weeklyPivotPP + weeklySR3 : na
+weeklyPivotS3 = barstate.islast and not executedDailyLogic and plotWeeklyPivotLevels ? weeklyPivotPP - weeklySR3 : na
 
 // Calculate monthly pivot levels
+monthlySR1 = (prevMonthHigh - prevMonthLow) * 0.382
+monthlySR2 = (prevMonthHigh - prevMonthLow) * 0.618
+monthlySR3 = prevMonthHigh - prevMonthLow
 monthlyPivotPP = barstate.islast and not executedDailyLogic and plotMonthlyPivotLevels ? (prevMonthHigh + prevMonthLow + prevMonthClose) / 3 : na
-monthlyPivotR1 = barstate.islast and not executedDailyLogic and plotMonthlyPivotLevels ? monthlyPivotPP + (prevMonthHigh - prevMonthLow) * 0.382 : na
-monthlyPivotS1 = barstate.islast and not executedDailyLogic and plotMonthlyPivotLevels ? monthlyPivotPP - (prevMonthHigh - prevMonthLow) * 0.382 : na
-monthlyPivotR2 = barstate.islast and not executedDailyLogic and plotMonthlyPivotLevels ? monthlyPivotPP + (prevMonthHigh - prevMonthLow) * 0.618 : na
-monthlyPivotS2 = barstate.islast and not executedDailyLogic and plotMonthlyPivotLevels ? monthlyPivotPP - (prevMonthHigh - prevMonthLow) * 0.618 : na
-monthlyPivotR3 = barstate.islast and not executedDailyLogic and plotMonthlyPivotLevels ? monthlyPivotPP + (prevMonthHigh - prevMonthLow) : na
-monthlyPivotS3 = barstate.islast and not executedDailyLogic and plotMonthlyPivotLevels ? monthlyPivotPP - (prevMonthHigh - prevMonthLow) : na
+monthlyPivotR1 = barstate.islast and not executedDailyLogic and plotMonthlyPivotLevels ? monthlyPivotPP + monthlySR1 : na
+monthlyPivotS1 = barstate.islast and not executedDailyLogic and plotMonthlyPivotLevels ? monthlyPivotPP - monthlySR1 : na
+monthlyPivotR2 = barstate.islast and not executedDailyLogic and plotMonthlyPivotLevels ? monthlyPivotPP + monthlySR2 : na
+monthlyPivotS2 = barstate.islast and not executedDailyLogic and plotMonthlyPivotLevels ? monthlyPivotPP - monthlySR2 : na
+monthlyPivotR3 = barstate.islast and not executedDailyLogic and plotMonthlyPivotLevels ? monthlyPivotPP + monthlySR3 : na
+monthlyPivotS3 = barstate.islast and not executedDailyLogic and plotMonthlyPivotLevels ? monthlyPivotPP - monthlySR3 : na
 
 // Calculate yearly pivot levels
+yearlySR1 = (prevYearHigh - prevYearLow) * 0.382
+yearlySR2 = (prevYearHigh - prevYearLow) * 0.618
+yearlySR3 = prevYearHigh - prevYearLow
 yearlyPivotPP = barstate.islast and not executedDailyLogic and plotYearlyPivotLevels ? (prevYearHigh + prevYearLow + prevYearClose) / 3 : na
-yearlyPivotR1 = barstate.islast and not executedDailyLogic and plotYearlyPivotLevels ? yearlyPivotPP + (prevYearHigh - prevYearLow) * 0.382 : na
-yearlyPivotS1 = barstate.islast and not executedDailyLogic and plotYearlyPivotLevels ? yearlyPivotPP - (prevYearHigh - prevYearLow) * 0.382 : na
-yearlyPivotR2 = barstate.islast and not executedDailyLogic and plotYearlyPivotLevels ? yearlyPivotPP + (prevYearHigh - prevYearLow) * 0.618 : na
-yearlyPivotS2 = barstate.islast and not executedDailyLogic and plotYearlyPivotLevels ? yearlyPivotPP - (prevYearHigh - prevYearLow) * 0.618 : na
-yearlyPivotR3 = barstate.islast and not executedDailyLogic and plotYearlyPivotLevels ? yearlyPivotPP + (prevYearHigh - prevYearLow) : na
-yearlyPivotS3 = barstate.islast and not executedDailyLogic and plotYearlyPivotLevels ? yearlyPivotPP - (prevYearHigh - prevYearLow) : na
+yearlyPivotR1 = barstate.islast and not executedDailyLogic and plotYearlyPivotLevels ? yearlyPivotPP + yearlySR1 : na
+yearlyPivotS1 = barstate.islast and not executedDailyLogic and plotYearlyPivotLevels ? yearlyPivotPP - yearlySR1 : na
+yearlyPivotR2 = barstate.islast and not executedDailyLogic and plotYearlyPivotLevels ? yearlyPivotPP + yearlySR2 : na
+yearlyPivotS2 = barstate.islast and not executedDailyLogic and plotYearlyPivotLevels ? yearlyPivotPP - yearlySR2 : na
+yearlyPivotR3 = barstate.islast and not executedDailyLogic and plotYearlyPivotLevels ? yearlyPivotPP + yearlySR3 : na
+yearlyPivotS3 = barstate.islast and not executedDailyLogic and plotYearlyPivotLevels ? yearlyPivotPP - yearlySR3 : na
 
 if barstate.islast and not executedDailyLogic and (timeframe.isintraday or timeframe.isdaily)
     if showDailyGaps
