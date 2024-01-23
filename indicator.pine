@@ -19,7 +19,7 @@ showHVAnomalies = input.bool(true, title="Show High Volume Anomalies")
 showLVAnomalies = input.bool(true, title="Show Low Volume Anomalies")
 highVolumeThreshold = input(2.0, title="High Volume Threshold")
 volumeMetric = input.string("Median", title="Acceptable Volume Metric", options = ['SMA', 'Median'])
-acceptableVolumeThreshold = input(0.75, title="Acceptable Volume Threshold")
+acceptableVolumeThreshold = input(0.5, title="Acceptable Volume Threshold")
 volumeMetricLength = input.int(50, minval=10, maxval=500,title="Volume Metric Length")
 volumeMedianSessionData = input.string("Extended", title = "Volume Median Session Data", options = ['Regular', 'Extended'])
 futuresRegularSession = input("0830-1500:23456", title = "Futures Regular Session")
@@ -110,16 +110,32 @@ greenCandle = close > open
 redCandle = close < open
 candleMidpoint = (high - (high - low) / 2)
 
+// Pre-computed conditions to avoid redundancy
+sufficientVolumeAndVolatility = sufficientVolume and sufficientVolatility
+isVolumeNAorHigher = na(volume) or higherVolumeThanPrev
+isLowerVolumeThanPrevAndVolatility = lowerVolumeThanPrev and sufficientVolumeAndVolatility
+isMomentumCandleCondition = showMomentum and sufficientVolume and isVolumeNAorHigher and bodyGreaterThanMomentumATRThreshold
+
 // Determine candle types
-isDoji = showDojis and sufficientVolume and sufficientVolatility and body <= highLow * dojiBodyToTotalRatio
-isHammer = showHammers and sufficientVolume and sufficientVolatility and not isDoji and lowerWick >= body * hammerBodyToTotalRatio and bodyLow >= candleMidpoint and upperWick <= body * upperWickToBodyRatio
-isShooter = showShooters and sufficientVolume and sufficientVolatility and not isDoji and upperWick >= body * hammerBodyToTotalRatio and bodyHigh <= candleMidpoint and lowerWick <= body * upperWickToBodyRatio
-bullishMomentumCandle = showMomentum and sufficientVolume and (na(volume) or higherVolumeThanPrev) and greenCandle and bodyGreaterThanMomentumATRThreshold and upperWick < body
-bearishMomentumCandle = showMomentum and sufficientVolume and (na(volume) or higherVolumeThanPrev) and redCandle and bodyGreaterThanMomentumATRThreshold and lowerWick < body
-bullishHighVolumeAnomaly = showHVAnomalies and redCandle and higherVolumeThanPrev and sufficientVolume and sufficientVolatility and close[1] < open[1] and body < prevCandleBody
-bearishHighVolumeAnomaly = showHVAnomalies and greenCandle and higherVolumeThanPrev and sufficientVolume and sufficientVolatility and close[1] > open[1] and body < prevCandleBody
-bullishLowVolumeAnomaly = showLVAnomalies and volumeLessThanMetric and redCandle and bodyGreaterThanMomentumATRThreshold and lowerVolumeThanPrev and sufficientVolume and sufficientVolatility
-bearishLowVolumeAnomaly = showLVAnomalies and volumeLessThanMetric and greenCandle and bodyGreaterThanMomentumATRThreshold and lowerVolumeThanPrev and sufficientVolume and sufficientVolatility
+isDoji = showDojis and sufficientVolumeAndVolatility and body <= highLow * dojiBodyToTotalRatio
+isNotDojiAndSufficient = not isDoji and sufficientVolumeAndVolatility
+isHammer = showHammers and isNotDojiAndSufficient and lowerWick >= body * hammerBodyToTotalRatio and bodyLow >= candleMidpoint and upperWick <= body * upperWickToBodyRatio
+isShooter = showShooters and isNotDojiAndSufficient and upperWick >= body * hammerBodyToTotalRatio and bodyHigh <= candleMidpoint and lowerWick <= body * upperWickToBodyRatio
+bullishMomentumCandle = isMomentumCandleCondition and greenCandle and upperWick < body
+bearishMomentumCandle = isMomentumCandleCondition and redCandle and lowerWick < body
+notDojiHammerOrShooter = not isDoji and not isHammer and not isShooter
+
+// High volume anomalies
+isHighVolumeAnomalyCondition = showHVAnomalies and higherVolumeThanPrev and sufficientVolumeAndVolatility
+bullishHighVolumeAnomaly = isHighVolumeAnomalyCondition and redCandle and close[1] < open[1] and body < prevCandleBody
+bearishHighVolumeAnomaly = isHighVolumeAnomalyCondition and greenCandle and close[1] > open[1] and body < prevCandleBody
+
+// Low volume anomalies
+isLowVolumeAnomalyCondition = showLVAnomalies and volumeLessThanMetric and isLowerVolumeThanPrevAndVolatility and bodyGreaterThanMomentumATRThreshold
+bullishLowVolumeAnomaly = isLowVolumeAnomalyCondition and redCandle
+bearishLowVolumeAnomaly = isLowVolumeAnomalyCondition and greenCandle
+
+// Volume Anomalies
 bullishVolumeAnomaly = bullishHighVolumeAnomaly or bullishLowVolumeAnomaly
 bearishVolumeAnomaly = bearishHighVolumeAnomaly or bearishLowVolumeAnomaly
 
@@ -191,7 +207,7 @@ if barstate.islast and not (session.ismarket and prevMarketSession)
     executedDailyLogic := false
 
 // Pull in previous day, week, month, and year high/low/close and current day, week, and month open.
-barIsLastAndNotExecutedDailyLogic = barstate.islast and not executedDailyLogic
+barIsLastAndNotExecutedDailyLogic = not executedDailyLogic and barstate.islast
 pullYearHighLowClose = barIsLastAndNotExecutedDailyLogic and plotYearlyPivotLevels
 pullMonthHighLow = barIsLastAndNotExecutedDailyLogic and plotPrevMonthHighLow
 pullWeekHighLow = barIsLastAndNotExecutedDailyLogic and plotPrevWeekHighLow
@@ -359,14 +375,14 @@ plotshape(showMomentum and bullishMomentumCandle and highVolume, style=shape.tri
 plotshape(showMomentum and bearishMomentumCandle and highVolume, style=shape.triangledown, location=location.abovebar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="M+")
 
 // Plot volume anomalies
-plotshape(showHVAnomalies and bullishHighVolumeAnomaly and not isDoji and not isHammer and not highVolume, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A")
-plotshape(showHVAnomalies and bearishHighVolumeAnomaly and not isDoji and not isShooter and not highVolume, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A")
+plotshape(showHVAnomalies and bullishHighVolumeAnomaly and notDojiHammerOrShooter and not highVolume, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A")
+plotshape(showHVAnomalies and bearishHighVolumeAnomaly and notDojiHammerOrShooter and not highVolume, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A")
 
-plotshape(showHVAnomalies and bullishHighVolumeAnomaly and not isDoji and not isHammer and highVolume, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A+")
-plotshape(showHVAnomalies and bearishHighVolumeAnomaly and not isDoji and not isShooter and highVolume, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A+")
+plotshape(showHVAnomalies and bullishHighVolumeAnomaly and notDojiHammerOrShooter and highVolume, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A+")
+plotshape(showHVAnomalies and bearishHighVolumeAnomaly and notDojiHammerOrShooter and highVolume, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A+")
 
-plotshape(showLVAnomalies and bullishLowVolumeAnomaly and not isDoji and not isHammer and not highVolume, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A")
-plotshape(showLVAnomalies and bearishLowVolumeAnomaly and not isDoji and not isShooter and not highVolume, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A")
+plotshape(showLVAnomalies and bullishLowVolumeAnomaly and notDojiHammerOrShooter and not highVolume, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A")
+plotshape(showLVAnomalies and bearishLowVolumeAnomaly and notDojiHammerOrShooter and not highVolume, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A")
 
-plotshape(showLVAnomalies and bullishLowVolumeAnomaly and not isDoji and not isHammer and highVolume, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A+")
-plotshape(showLVAnomalies and bearishLowVolumeAnomaly and not isDoji and not isShooter and highVolume, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A+")
+plotshape(showLVAnomalies and bullishLowVolumeAnomaly and notDojiHammerOrShooter and highVolume, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A+")
+plotshape(showLVAnomalies and bearishLowVolumeAnomaly and notDojiHammerOrShooter and highVolume, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A+")
