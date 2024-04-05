@@ -1,5 +1,4 @@
 // This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
-// © adobrusky
 
 //@version=5
 indicator("Volume Price Analysis Indicator", shorttitle="VPA Indicator", overlay=true, max_bars_back=500, max_lines_count=500, max_labels_count=500)
@@ -363,41 +362,41 @@ plot(dailyOpeningPrint, style=plot.style_circles, color=openingPrintColor, linew
 
 // Plot hammers
 plotshape(showHammers and isHammer and not highVolume and not bullishVolumeAnomaly, style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="H")
-plotshape(showHammers and isHammer and highVolume and not bullishVolumeAnomaly, style=shape.triangleup, location=location.belowbar, textcolor=color.rgb(255, 255, 255), color=color.rgb(211, 48, 176), text="H+")
+plotshape(showHammers and isHammer and highVolume and not bullishVolumeAnomaly, style=shape.triangleup, location=location.belowbar, textcolor=color.rgb(255, 255, 255), color=color.rgb(211, 48, 176), text="H!")
 
 plotshape(showHammers and isHammer and not highVolume and bullishVolumeAnomaly, style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="HA")
-plotshape(showHammers and isHammer and highVolume and bullishVolumeAnomaly, style=shape.triangleup, location=location.belowbar, textcolor=color.rgb(255, 255, 255), color=color.rgb(211, 48, 176), text="HA+")
+plotshape(showHammers and isHammer and highVolume and bullishVolumeAnomaly, style=shape.triangleup, location=location.belowbar, textcolor=color.rgb(255, 255, 255), color=color.rgb(211, 48, 176), text="HA!")
 
 // Plot shooters
 plotshape(showShooters and isShooter and not highVolume and not bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, color=color.rgb(255, 155, 93), textcolor=color.rgb(255, 255, 255), text="S")
-plotshape(showShooters and isShooter and highVolume and not bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, textcolor=color.rgb(255, 255, 255), color=color.rgb(255, 155, 93), text="S+")
+plotshape(showShooters and isShooter and highVolume and not bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, textcolor=color.rgb(255, 255, 255), color=color.rgb(255, 155, 93), text="S!")
 
 plotshape(showShooters and isShooter and not highVolume and bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, color=color.rgb(255, 155, 93), textcolor=color.rgb(255, 255, 255), text="SA")
-plotshape(showShooters and isShooter and highVolume and bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, textcolor=color.rgb(255, 255, 255), color=color.rgb(255, 155, 93), text="SA+")
+plotshape(showShooters and isShooter and highVolume and bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, textcolor=color.rgb(255, 255, 255), color=color.rgb(255, 155, 93), text="SA!")
 
 // Plots dojis
 plotshape(showDojis and isDoji and not highVolume and not higherVolumeThanPrev, style=shape.triangledown, location=location.abovebar, color=color.rgb(201, 55, 55), textcolor=color.rgb(255, 255, 255), text="D")
-plotshape(showDojis and isDoji and highVolume and not higherVolumeThanPrev, style=shape.triangledown, location=location.abovebar, textcolor=color.rgb(255, 255, 255), color=color.rgb(201, 55, 55), text="D+")
+plotshape(showDojis and isDoji and highVolume and not higherVolumeThanPrev, style=shape.triangledown, location=location.abovebar, textcolor=color.rgb(255, 255, 255), color=color.rgb(201, 55, 55), text="D!")
 
 plotshape(showDojis and isDoji and not highVolume and higherVolumeThanPrev, style=shape.triangledown, location=location.abovebar, color=color.rgb(201, 55, 55), textcolor=color.rgb(255, 255, 255), text="DA")
-plotshape(showDojis and isDoji and highVolume and higherVolumeThanPrev, style=shape.triangledown, location=location.abovebar, textcolor=color.rgb(255, 255, 255), color=color.rgb(201, 55, 55), text="DA+")
+plotshape(showDojis and isDoji and highVolume and higherVolumeThanPrev, style=shape.triangledown, location=location.abovebar, textcolor=color.rgb(255, 255, 255), color=color.rgb(201, 55, 55), text="DA!")
 
 // Plot momentum candles
 plotshape(showMomentum and bullishMomentumCandle and not highVolume, style=shape.triangleup, location=location.belowbar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="M")
 plotshape(showMomentum and bearishMomentumCandle and not highVolume, style=shape.triangledown, location=location.abovebar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="M")
 
-plotshape(showMomentum and bullishMomentumCandle and highVolume, style=shape.triangleup, location=location.belowbar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="M+")
-plotshape(showMomentum and bearishMomentumCandle and highVolume, style=shape.triangledown, location=location.abovebar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="M+")
+plotshape(showMomentum and bullishMomentumCandle and highVolume, style=shape.triangleup, location=location.belowbar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="M!")
+plotshape(showMomentum and bearishMomentumCandle and highVolume, style=shape.triangledown, location=location.abovebar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="M!")
 
 // Plot volume anomalies
 plotshape(showHVAnomalies and bullishHighVolumeAnomaly and notDojiHammerOrShooter and not highVolume, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A")
 plotshape(showHVAnomalies and bearishHighVolumeAnomaly and notDojiHammerOrShooter and not highVolume, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A")
 
-plotshape(showHVAnomalies and bullishHighVolumeAnomaly and notDojiHammerOrShooter and highVolume, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A+")
-plotshape(showHVAnomalies and bearishHighVolumeAnomaly and notDojiHammerOrShooter and highVolume, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A+")
+plotshape(showHVAnomalies and bullishHighVolumeAnomaly and notDojiHammerOrShooter and highVolume, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A!")
+plotshape(showHVAnomalies and bearishHighVolumeAnomaly and notDojiHammerOrShooter and highVolume, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A!")
 
 plotshape(showLVAnomalies and bullishLowVolumeAnomaly and notDojiHammerOrShooter and not highVolume, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A")
 plotshape(showLVAnomalies and bearishLowVolumeAnomaly and notDojiHammerOrShooter and not highVolume, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A")
 
-plotshape(showLVAnomalies and bullishLowVolumeAnomaly and notDojiHammerOrShooter and highVolume, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A+")
-plotshape(showLVAnomalies and bearishLowVolumeAnomaly and notDojiHammerOrShooter and highVolume, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A+")
+plotshape(showLVAnomalies and bullishLowVolumeAnomaly and notDojiHammerOrShooter and highVolume, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A!")
+plotshape(showLVAnomalies and bearishLowVolumeAnomaly and notDojiHammerOrShooter and highVolume, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A!")
