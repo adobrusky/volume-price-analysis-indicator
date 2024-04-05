@@ -2,7 +2,7 @@
 // © adobrusky
 
 //@version=5
-indicator("Volume Price Analysis Indicator", shorttitle="VPA Indicator", overlay=true, max_bars_back=500)
+indicator("Volume Price Analysis Indicator", shorttitle="VPA Indicator", overlay=true, max_bars_back=500, max_lines_count=500, max_labels_count=500)
 
 // User Inputs
 showHammers = input.bool(true, title="Show Hammers")
@@ -38,15 +38,19 @@ plotYearlyPivotLevels = input.bool(true, title="Plot Yearly Pivot Levels")
 plotMonthlyPivotLevels = input.bool(true, title="Plot Monthly Pivot Levels")
 plotWeeklyPivotLevels = input.bool(true, title="Plot Weekly Pivot Levels")
 plotDailyPivotLevels = input.bool(true, title="Plot Daily Pivot Levels")
-hideAutomaticLevelsHigherThan = input.timeframe("60", title = "Hide Automatic Price Levels Higher Than Timeframe")
+hideDailyAutomaticLevelsHigherThan = input.timeframe("15", title = "Hide Daily Automatic Price Levels Above")
+hideWeeklyAutomaticLevelsHigherThan = input.timeframe("60", title = "Hide Weekly Automatic Price Levels Above")
+hideAllAutomaticLevelsHigherThan = input.timeframe("D", title = "Hide All Automatic Price Levels Above")
 highPriceLevelColor  = input(color.rgb(8, 153, 129), title="High Price Level Color")
 lowPriceLevelColor  = input(color.rgb(242, 54, 69), title ="Low Price Level Color")
 openingPrintColor = input(color.rgb(243, 152, 15), title="Opening Print Color")
 pivotLevelColor = input(color.rgb(240, 98, 146), title="Pivot Level Color")
 
-var bool hideAutomaticLevels = (timeframe.in_seconds(hideAutomaticLevelsHigherThan) / 60) < (timeframe.in_seconds() / 60)
+var bool hideDailyAutomaticLevels = (timeframe.in_seconds(hideDailyAutomaticLevelsHigherThan) / 60) < (timeframe.in_seconds() / 60)
+var bool hideWeeklyAutomaticLevels = (timeframe.in_seconds(hideWeeklyAutomaticLevelsHigherThan) / 60) < (timeframe.in_seconds() / 60)
+var bool hideAllAutomaticLevels = (timeframe.in_seconds(hideAllAutomaticLevelsHigherThan) / 60) < (timeframe.in_seconds() / 60)
 
-if hideAutomaticLevels
+if hideAllAutomaticLevels
     plotPrevMonthHighLow := false
     plotPrevWeekHighLow := false
     plotPrevDayHighLow := false
@@ -56,6 +60,17 @@ if hideAutomaticLevels
     plotYearlyPivotLevels := false
     plotMonthlyPivotLevels := false
     plotWeeklyPivotLevels := false
+    plotDailyPivotLevels := false
+else if hideWeeklyAutomaticLevels
+    plotPrevDayHighLow := false
+    plotWeeklyOpeningPrint := false
+    plotPrevWeekHighLow := false
+    plotDailyOpeningPrint := false
+    plotWeeklyPivotLevels := false
+    plotDailyPivotLevels := false
+else if hideDailyAutomaticLevels
+    plotPrevDayHighLow := false
+    plotDailyOpeningPrint := false
     plotDailyPivotLevels := false
 
 // Volume calculations
