@@ -213,36 +213,70 @@ getGaps(lookBack) =>
 
     gapsDict
 
-// Show Daily Gaps
-var bool executedDailyLogic = false
-var bool prevMarketSession = session.ismarket
+getSession() =>
+    if session.ismarket
+        "M"
+    else if session.ispremarket
+        "P"
+    else
+        "A"
 
-if barstate.islast and not (session.ismarket and prevMarketSession)
-    executedDailyLogic := false
+// Show Daily Gaps
+var bool updatedOpeningLogic = false
+var bool updatedAutomaticLevels = false
+var string prevMarketSession = getSession()
+string currentSession = getSession()
+
+plotchar(prevMarketSession == "M", "M1", "", location.top)
+plotchar(prevMarketSession == "P", "P1", "", location.top)
+plotchar(prevMarketSession == "A", "A1", "", location.top)
+plotchar(getSession() == "M", "M2", "", location.top)
+plotchar(getSession() == "P", "P2", "", location.top)
+plotchar(getSession() == "A", "A2", "", location.top)
+
+
+if currentSession == "M" and prevMarketSession == "P"
+    updatedOpeningLogic := false
+
+if currentSession == "P" and prevMarketSession == "A"
+    updatedAutomaticLevels := false
+
+plotchar(currentSession == "P" and prevMarketSession == "A", "Auto", "", location.top)
+plotchar(updatedOpeningLogic, "Opening", "", location.top)
+plotchar(currentSession != "M", "test", "", location.top)
+
+// if barstate.islast and not (getSession() == prevMarketSession1)
+//     executedPremarketLogic := false
 
 // Pull in previous day, week, month, and year high/low/close and current day, week, and month open.
-barIsLastAndNotExecutedDailyLogic = not executedDailyLogic and barstate.islast
-pullYearHighLowClose = barIsLastAndNotExecutedDailyLogic and plotYearlyPivotLevels
-pullMonthHighLow = barIsLastAndNotExecutedDailyLogic and plotPrevMonthHighLow
-pullWeekHighLow = barIsLastAndNotExecutedDailyLogic and plotPrevWeekHighLow
-pullDayHighLow = barIsLastAndNotExecutedDailyLogic and plotPrevDayHighLow
-prevYearHigh = pullYearHighLowClose ? request.security(syminfo.tickerid, "12M", high[1], lookahead=barmerge.lookahead_on) : na
-prevYearLow = pullYearHighLowClose ? request.security(syminfo.tickerid, "12M", low[1], lookahead=barmerge.lookahead_on) : na
+barIsLastAndNotUpdatedOpeningLogic = not updatedOpeningLogic and barstate.islast
+barIsLastAndNotUpdatedAutomaticLevels = not updatedAutomaticLevels and barstate.islast
+plotchar(barIsLastAndNotUpdatedAutomaticLevels, "not updatd levels", "", location.top)
+plotchar(barIsLastAndNotUpdatedAutomaticLevels and currentSession != "M", "not updatd levels 2", "", location.top)
+plotchar(barIsLastAndNotUpdatedAutomaticLevels and not updatedAutomaticLevels and currentSession != "M", "not updatd levels 23", "", location.top)
+pullYearHighLowClose = barIsLastAndNotUpdatedAutomaticLevels and plotYearlyPivotLevels
+pullMonthHighLow = barIsLastAndNotUpdatedAutomaticLevels and plotPrevMonthHighLow
+pullWeekHighLow = barIsLastAndNotUpdatedAutomaticLevels and plotPrevWeekHighLow
+pullDayHighLow = barIsLastAndNotUpdatedAutomaticLevels and plotPrevDayHighLow
+prevYearHigh = pullYearHighLowClose ? request.security(syminfo.tickerid, "12M", currentSession != "M" ? high : high[1], lookahead=barmerge.lookahead_on) : na
+prevYearLow = pullYearHighLowClose ? request.security(syminfo.tickerid, "12M", currentSession != "M" ? low : low[1], lookahead=barmerge.lookahead_on) : na
 prevYearClose = pullYearHighLowClose ? request.security(syminfo.tickerid, "12M", close[1], lookahead=barmerge.lookahead_on) : na
-prevMonthHigh = pullMonthHighLow ? request.security(syminfo.tickerid, "M", high[1], lookahead=barmerge.lookahead_on) : na
-prevMonthLow = pullMonthHighLow ? request.security(syminfo.tickerid, "M", low[1], lookahead=barmerge.lookahead_on) : na
-prevMonthClose = barIsLastAndNotExecutedDailyLogic and plotMonthlyPivotLevels ? request.security(syminfo.tickerid, "M", close[1], lookahead=barmerge.lookahead_on) : na
-prevWeekHigh = pullWeekHighLow ? request.security(syminfo.tickerid, "W", high[1], lookahead=barmerge.lookahead_on) : na
-prevWeekLow = pullWeekHighLow ? request.security(syminfo.tickerid, "W", low[1], lookahead=barmerge.lookahead_on) : na
-prevWeekClose = barIsLastAndNotExecutedDailyLogic and plotWeeklyPivotLevels ? request.security(syminfo.tickerid, "W", close[1], lookahead=barmerge.lookahead_on) : na
-prevDayHigh = pullDayHighLow ? request.security(syminfo.tickerid, "D", high[1], lookahead=barmerge.lookahead_on) : na
-prevDayLow = pullDayHighLow ? request.security(syminfo.tickerid, "D", low[1], lookahead=barmerge.lookahead_on) : na
-prevDayClose = barIsLastAndNotExecutedDailyLogic and plotDailyPivotLevels ? request.security(syminfo.tickerid, "D", close[1], lookahead=barmerge.lookahead_on) : na
-monthlyOpeningPrint = barIsLastAndNotExecutedDailyLogic and plotMonthlyOpeningPrint ? request.security(syminfo.tickerid, "M", open, lookahead=barmerge.lookahead_on) : na
-weeklyOpeningPrint = barIsLastAndNotExecutedDailyLogic and plotWeeklyOpeningPrint ? request.security(syminfo.tickerid, "W", open, lookahead=barmerge.lookahead_on) : na
-dailyOpeningPrint = barIsLastAndNotExecutedDailyLogic and plotDailyOpeningPrint ? request.security(syminfo.tickerid, "D", open, lookahead=barmerge.lookahead_on) : na
-
-dailyGaps = request.security(syminfo.tickerid, "D", barIsLastAndNotExecutedDailyLogic and showDailyGaps ? getGaps(gapLookback) : map.new<int, string>(), lookahead=barmerge.lookahead_on)
+prevMonthHigh = pullMonthHighLow ? request.security(syminfo.tickerid, "M", currentSession != "M" ? high : high[1], lookahead=barmerge.lookahead_on) : na
+prevMonthLow = pullMonthHighLow ? request.security(syminfo.tickerid, "M", currentSession != "M" ? low : low[1], lookahead=barmerge.lookahead_on) : na
+prevMonthClose = barIsLastAndNotUpdatedOpeningLogic and plotMonthlyPivotLevels ? request.security(syminfo.tickerid, "M", close[1], lookahead=barmerge.lookahead_on) : na
+prevWeekHigh = pullWeekHighLow ? request.security(syminfo.tickerid, "W", currentSession != "M" ? high : high[1], lookahead=barmerge.lookahead_on) : na
+prevWeekLow = pullWeekHighLow ? request.security(syminfo.tickerid, "W", currentSession != "M" ? low : low[1], lookahead=barmerge.lookahead_on) : na
+prevWeekClose = barIsLastAndNotUpdatedOpeningLogic and plotWeeklyPivotLevels ? request.security(syminfo.tickerid, "W", close[1], lookahead=barmerge.lookahead_on) : na
+plotchar(pullDayHighLow, "pull", "", location.top)
+plotchar(currentSession != "M", "current", "", location.top)
+prevDayHigh = pullDayHighLow ? request.security(syminfo.tickerid, "D", currentSession != "M" ? high : high[1], lookahead=barmerge.lookahead_on) : na
+prevDayLow = pullDayHighLow ? request.security(syminfo.tickerid, "D", currentSession != "M" ? low : low[1], lookahead=barmerge.lookahead_on) : na
+prevDayClose = barIsLastAndNotUpdatedOpeningLogic and plotDailyPivotLevels ? request.security(syminfo.tickerid, "D", close[1], lookahead=barmerge.lookahead_on) : na
+monthlyOpeningPrint = barIsLastAndNotUpdatedOpeningLogic and plotMonthlyOpeningPrint ? request.security(syminfo.tickerid, "M", open, lookahead=barmerge.lookahead_on) : na
+weeklyOpeningPrint = barIsLastAndNotUpdatedOpeningLogic and plotWeeklyOpeningPrint ? request.security(syminfo.tickerid, "W", open, lookahead=barmerge.lookahead_on) : na
+dailyOpeningPrint = barIsLastAndNotUpdatedOpeningLogic and plotDailyOpeningPrint ? request.security(syminfo.tickerid, "D", open, lookahead=barmerge.lookahead_on) : na
+plotchar(prevDayHigh, "daily", "", location.top)
+dailyGaps = request.security(syminfo.tickerid, "D", barIsLastAndNotUpdatedOpeningLogic and showDailyGaps ? getGaps(gapLookback) : map.new<int, string>(), lookahead=barmerge.lookahead_on)
 
 var box[] boxIds = array.new_box()
 var line[] lineIds = array.new_line()
@@ -259,7 +293,7 @@ clearLines() =>
             line.delete(id)
     array.clear(lineIds)
 
-if barIsLastAndNotExecutedDailyLogic
+if barIsLastAndNotUpdatedAutomaticLevels
     clearLines()
     if plotDailyPivotLevels
         // Calculate and plot daily pivot levels
@@ -337,17 +371,19 @@ if barIsLastAndNotExecutedDailyLogic
         array.push(lineIds, line.new(bar_index, yearlyPivotS2, bar_index + 1, yearlyPivotS2, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 5))
         array.push(lineIds, line.new(bar_index, yearlyPivotR3, bar_index + 1, yearlyPivotR3, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 5))
         array.push(lineIds, line.new(bar_index, yearlyPivotS3, bar_index + 1, yearlyPivotS3, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 5))
+    updatedAutomaticLevels := true
 
-if barIsLastAndNotExecutedDailyLogic and (timeframe.isintraday or timeframe.isdaily)
+if barIsLastAndNotUpdatedOpeningLogic and (timeframe.isintraday or timeframe.isdaily)
     if showDailyGaps
         singleBar = ta.change(time(timeframe.period))
         clearBoxes()
         for [key, value] in dailyGaps
             gapHighAndLow = str.split(value, ",")
             array.push(boxIds, box.new(key, str.tonumber(array.get(gapHighAndLow, 0)), time - singleBar, str.tonumber(array.get(gapHighAndLow, 1)), border_color=dailyGapBorderColor, border_width=dailyGapBorderWidth, border_style=line.style_solid, extend=extend.right, xloc=xloc.bar_time, bgcolor=dailyGapColor))
-        executedDailyLogic := true
+        updatedOpeningLogic := true
 
-prevMarketSession := session.ismarket
+// prevMarketSession := session.ismarket
+prevMarketSession := getSession()
 
 // Plot prev day, week, and month high/low and the current month, week, and day opening print
 plot(prevMonthHigh, style=plot.style_circles, color=highPriceLevelColor, linewidth=5, trackprice = true, show_last = 1, offset = -99999)
