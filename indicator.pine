@@ -175,7 +175,7 @@ getGaps(lookBack) =>
 
         // Check if gaps are filled or partially filled
         keysToRemove = array.new_int(0)
-        if not barstate.islast[i]
+        if not barstate.isrealtime[i]
             for [key, value] in gapsDict
                 gapHighAndLow = str.split(value, ",")
                 gapHigh = str.tonumber(array.get(gapHighAndLow, 0))
