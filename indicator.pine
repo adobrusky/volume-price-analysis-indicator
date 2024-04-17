@@ -24,9 +24,9 @@ volumeMedianSessionData = input.string("Extended", title = "Volume Median Sessio
 futuresRegularSession = input("0830-1500:23456", title = "Futures Regular Session")
 showDailyGaps = input.bool(true, title="Show Daily Gaps")
 gapLookback = input.int(200, minval=10, maxval=500, title="Gap Lookback")
-dailyGapColor = input(color.rgb(255, 255, 255, 98), title="Daily Gap Color")
+dailyGapColor = input(color.rgb(255, 255, 255, 95), title="Daily Gap Color")
 dailyGapBorderColor = input(color.rgb(255, 255, 255, 30), title="Daily Gap Border Color")
-dailyGapBorderWidth = input(3, title="Daily Gap Border Width")
+dailyGapBorderWidth = input(2, title="Daily Gap Border Width")
 plotPrevMonthHighLow = input.bool(true, title="Plot Previous Month High/Low")
 plotPrevWeekHighLow = input.bool(true, title="Plot Previous Week High/Low")
 plotPrevDayHighLow = input.bool(true, title="Plot Previous Day High/Low")
@@ -221,13 +221,13 @@ getSession() =>
     else
         "A"
 
-// Show Daily Gaps
+// Determine if we need to execute the logic at open and close
 var bool executedDailyLogic = false
 var string prevMarketSession = getSession()
-currentSession = getSession()
-
-if barstate.islast and prevMarketSession == "P" and currentSession == "M"
-    executedDailyLogic := false
+if barstate.islast
+    currentSession = getSession()
+    if (prevMarketSession == "P" and currentSession == "M") or (prevMarketSession == "M" and currentSession == "A")
+        executedDailyLogic := false
 
 // Pull in previous day, week, month, and year high/low/close and current day, week, and month open.
 barIsLastAndNotExecutedDailyLogic = not executedDailyLogic and barstate.islast
@@ -348,14 +348,18 @@ if barIsLastAndNotExecutedDailyLogic
 
 if barIsLastAndNotExecutedDailyLogic and (timeframe.isintraday or timeframe.isdaily)
     if showDailyGaps
-        singleBar = ta.change(time(timeframe.period))
         clearBoxes()
         for [key, value] in dailyGaps
             gapHighAndLow = str.split(value, ",")
-            array.push(boxIds, box.new(key, str.tonumber(array.get(gapHighAndLow, 0)), time - singleBar, str.tonumber(array.get(gapHighAndLow, 1)), border_color=dailyGapBorderColor, border_width=dailyGapBorderWidth, border_style=line.style_solid, extend=extend.right, xloc=xloc.bar_time, bgcolor=dailyGapColor))
+            gapHigh = str.tonumber(array.get(gapHighAndLow, 0))
+            gapLow = str.tonumber(array.get(gapHighAndLow, 1))
+            array.push(lineIds, line.new(key, gapHigh, time, gapHigh, width=dailyGapBorderWidth, color=dailyGapBorderColor, extend=extend.right, xloc=xloc.bar_time))
+            array.push(lineIds, line.new(key, gapLow, time, gapLow, width=dailyGapBorderWidth, color=dailyGapBorderColor, extend=extend.right, xloc=xloc.bar_time))
+            array.push(boxIds, box.new(key, gapHigh, time, gapLow, border_width=0, extend=extend.right, xloc=xloc.bar_time, bgcolor=dailyGapColor))
         executedDailyLogic := true
 
-prevMarketSession := getSession()
+if barstate.islast
+    prevMarketSession := getSession()
 
 // Plot prev day, week, and month high/low and the current month, week, and day opening print
 plot(prevMonthHigh, style=plot.style_circles, color=highPriceLevelColor, linewidth=5, trackprice = true, show_last = 1, offset = -99999)
