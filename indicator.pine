@@ -221,6 +221,12 @@ getSession() =>
     else
         "A"
 
+getHighLowOpenClose() =>
+    [high[1], low[1], open, close[1]]
+
+getHigherTimeframeData(timeframe) =>
+    request.security(syminfo.tickerid, timeframe, getHighLowOpenClose(), lookahead=barmerge.lookahead_on)
+
 // Determine if we need to execute the logic at open and close
 var bool executedDailyLogic = false
 var string prevMarketSession = getSession()
@@ -229,27 +235,7 @@ if barstate.islast
     if (prevMarketSession == "P" and currentSession == "M") or (prevMarketSession == "M" and currentSession == "A")
         executedDailyLogic := false
 
-// Pull in previous day, week, month, and year high/low/close and current day, week, and month open.
 barIsLastAndNotExecutedDailyLogic = not executedDailyLogic and barstate.islast
-pullYearHighLowClose = barIsLastAndNotExecutedDailyLogic and plotYearlyPivotLevels
-pullMonthHighLow = barIsLastAndNotExecutedDailyLogic and plotPrevMonthHighLow
-pullWeekHighLow = barIsLastAndNotExecutedDailyLogic and plotPrevWeekHighLow
-pullDayHighLow = barIsLastAndNotExecutedDailyLogic and plotPrevDayHighLow
-prevYearHigh = pullYearHighLowClose ? request.security(syminfo.tickerid, "12M", high[1], lookahead=barmerge.lookahead_on) : na
-prevYearLow = pullYearHighLowClose ? request.security(syminfo.tickerid, "12M", low[1], lookahead=barmerge.lookahead_on) : na
-prevYearClose = pullYearHighLowClose ? request.security(syminfo.tickerid, "12M", close[1], lookahead=barmerge.lookahead_on) : na
-prevMonthHigh = pullMonthHighLow ? request.security(syminfo.tickerid, "M", high[1], lookahead=barmerge.lookahead_on) : na
-prevMonthLow = pullMonthHighLow ? request.security(syminfo.tickerid, "M", low[1], lookahead=barmerge.lookahead_on) : na
-prevMonthClose = barIsLastAndNotExecutedDailyLogic and plotMonthlyPivotLevels ? request.security(syminfo.tickerid, "M", close[1], lookahead=barmerge.lookahead_on) : na
-prevWeekHigh = pullWeekHighLow ? request.security(syminfo.tickerid, "W", high[1], lookahead=barmerge.lookahead_on) : na
-prevWeekLow = pullWeekHighLow ? request.security(syminfo.tickerid, "W", low[1], lookahead=barmerge.lookahead_on) : na
-prevWeekClose = barIsLastAndNotExecutedDailyLogic and plotWeeklyPivotLevels ? request.security(syminfo.tickerid, "W", close[1], lookahead=barmerge.lookahead_on) : na
-prevDayHigh = pullDayHighLow ? request.security(syminfo.tickerid, "D", high[1], lookahead=barmerge.lookahead_on) : na
-prevDayLow = pullDayHighLow ? request.security(syminfo.tickerid, "D", low[1], lookahead=barmerge.lookahead_on) : na
-prevDayClose = barIsLastAndNotExecutedDailyLogic and plotDailyPivotLevels ? request.security(syminfo.tickerid, "D", close[1], lookahead=barmerge.lookahead_on) : na
-monthlyOpeningPrint = barIsLastAndNotExecutedDailyLogic and plotMonthlyOpeningPrint ? request.security(syminfo.tickerid, "M", open, lookahead=barmerge.lookahead_on) : na
-weeklyOpeningPrint = barIsLastAndNotExecutedDailyLogic and plotWeeklyOpeningPrint ? request.security(syminfo.tickerid, "W", open, lookahead=barmerge.lookahead_on) : na
-dailyOpeningPrint = barIsLastAndNotExecutedDailyLogic and plotDailyOpeningPrint ? request.security(syminfo.tickerid, "D", open, lookahead=barmerge.lookahead_on) : na
 dailyGaps = request.security(syminfo.tickerid, "D", barIsLastAndNotExecutedDailyLogic and showDailyGaps ? getGaps(gapLookback) : map.new<int, string>(), lookahead=barmerge.lookahead_on)
 
 var box[] boxIds = array.new_box()
@@ -267,67 +253,93 @@ clearLines() =>
             line.delete(id)
     array.clear(lineIds)
 
+// Plot automatic levels and daily gaps
 if barIsLastAndNotExecutedDailyLogic
     clearLines()
-    if plotDailyPivotLevels
-        // Calculate and plot daily pivot levels
-        dailySR1 = (prevDayHigh - prevDayLow) * 0.382
-        dailySR2 = (prevDayHigh - prevDayLow) * 0.618
-        dailySR3 = prevDayHigh - prevDayLow
-        dailyPivotPP = (prevDayHigh + prevDayLow + prevDayClose) / 3
-        dailyPivotR1 = dailyPivotPP + dailySR1
-        dailyPivotS1 = dailyPivotPP - dailySR1
-        dailyPivotR2 = dailyPivotPP + dailySR2
-        dailyPivotS2 = dailyPivotPP - dailySR2
-        dailyPivotR3 = dailyPivotPP + dailySR3
-        dailyPivotS3 = dailyPivotPP - dailySR3
-        array.push(lineIds, line.new(bar_index, dailyPivotPP, bar_index + 1, dailyPivotPP, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid))
-        array.push(lineIds, line.new(bar_index, dailyPivotR1, bar_index + 1, dailyPivotR1, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid))
-        array.push(lineIds, line.new(bar_index, dailyPivotS1, bar_index + 1, dailyPivotS1, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid))
-        array.push(lineIds, line.new(bar_index, dailyPivotR2, bar_index + 1, dailyPivotR2, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid))
-        array.push(lineIds, line.new(bar_index, dailyPivotS2, bar_index + 1, dailyPivotS2, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid))
-        array.push(lineIds, line.new(bar_index, dailyPivotR3, bar_index + 1, dailyPivotR3, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid))
-        array.push(lineIds, line.new(bar_index, dailyPivotS3, bar_index + 1, dailyPivotS3, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid))
-    if plotWeeklyPivotLevels
-        // Calculate and plot weekly pivot levels
-        weeklySR1 = (prevWeekHigh - prevWeekLow) * 0.382
-        weeklySR2 = (prevWeekHigh - prevWeekLow) * 0.618
-        weeklySR3 = prevWeekHigh - prevWeekLow
-        weeklyPivotPP = (prevWeekHigh + prevWeekLow + prevWeekClose) / 3
-        weeklyPivotR1 = weeklyPivotPP + weeklySR1
-        weeklyPivotS1 = weeklyPivotPP - weeklySR1
-        weeklyPivotR2 = weeklyPivotPP + weeklySR2
-        weeklyPivotS2 = weeklyPivotPP - weeklySR2
-        weeklyPivotR3 = weeklyPivotPP + weeklySR3
-        weeklyPivotS3 = weeklyPivotPP - weeklySR3
-        array.push(lineIds, line.new(bar_index, weeklyPivotPP, bar_index + 1, weeklyPivotPP, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 2))
-        array.push(lineIds, line.new(bar_index, weeklyPivotR1, bar_index + 1, weeklyPivotR1, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 2))
-        array.push(lineIds, line.new(bar_index, weeklyPivotS1, bar_index + 1, weeklyPivotS1, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 2))
-        array.push(lineIds, line.new(bar_index, weeklyPivotR2, bar_index + 1, weeklyPivotR2, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 2))
-        array.push(lineIds, line.new(bar_index, weeklyPivotS2, bar_index + 1, weeklyPivotS2, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 2))
-        array.push(lineIds, line.new(bar_index, weeklyPivotR3, bar_index + 1, weeklyPivotR3, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 2))
-        array.push(lineIds, line.new(bar_index, weeklyPivotS3, bar_index + 1, weeklyPivotS3, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 2))
-    if plotMonthlyPivotLevels
-        // Calculate and plot monthly pivot levels
-        monthlySR1 = (prevMonthHigh - prevMonthLow) * 0.382
-        monthlySR2 = (prevMonthHigh - prevMonthLow) * 0.618
-        monthlySR3 = prevMonthHigh - prevMonthLow
-        monthlyPivotPP = (prevMonthHigh + prevMonthLow + prevMonthClose) / 3
-        monthlyPivotR1 = monthlyPivotPP + monthlySR1
-        monthlyPivotS1 = monthlyPivotPP - monthlySR1
-        monthlyPivotR2 = monthlyPivotPP + monthlySR2
-        monthlyPivotS2 = monthlyPivotPP - monthlySR2
-        monthlyPivotR3 = monthlyPivotPP + monthlySR3
-        monthlyPivotS3 = monthlyPivotPP - monthlySR3
-        array.push(lineIds, line.new(bar_index, monthlyPivotPP, bar_index + 1, monthlyPivotPP, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 3))
-        array.push(lineIds, line.new(bar_index, monthlyPivotR1, bar_index + 1, monthlyPivotR1, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 3))
-        array.push(lineIds, line.new(bar_index, monthlyPivotS1, bar_index + 1, monthlyPivotS1, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 3))
-        array.push(lineIds, line.new(bar_index, monthlyPivotR2, bar_index + 1, monthlyPivotR2, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 3))
-        array.push(lineIds, line.new(bar_index, monthlyPivotS2, bar_index + 1, monthlyPivotS2, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 3))
-        array.push(lineIds, line.new(bar_index, monthlyPivotR3, bar_index + 1, monthlyPivotR3, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 3))
-        array.push(lineIds, line.new(bar_index, monthlyPivotS3, bar_index + 1, monthlyPivotS3, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 3))
+    // Plot daily automatic levels    
+    if plotPrevDayHighLow or plotDailyOpeningPrint or plotDailyPivotLevels
+        [prevDayHigh, prevDayLow, currentDayOpen, prevDayClose] = getHigherTimeframeData("D")
+        if plotDailyPivotLevels
+            dailySR1 = (prevDayHigh - prevDayLow) * 0.382
+            dailySR2 = (prevDayHigh - prevDayLow) * 0.618
+            dailySR3 = prevDayHigh - prevDayLow
+            dailyPivotPP = (prevDayHigh + prevDayLow + prevDayClose) / 3
+            dailyPivotR1 = dailyPivotPP + dailySR1
+            dailyPivotS1 = dailyPivotPP - dailySR1
+            dailyPivotR2 = dailyPivotPP + dailySR2
+            dailyPivotS2 = dailyPivotPP - dailySR2
+            dailyPivotR3 = dailyPivotPP + dailySR3
+            dailyPivotS3 = dailyPivotPP - dailySR3
+            array.push(lineIds, line.new(bar_index, dailyPivotPP, bar_index + 1, dailyPivotPP, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid))
+            array.push(lineIds, line.new(bar_index, dailyPivotR1, bar_index + 1, dailyPivotR1, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid))
+            array.push(lineIds, line.new(bar_index, dailyPivotS1, bar_index + 1, dailyPivotS1, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid))
+            array.push(lineIds, line.new(bar_index, dailyPivotR2, bar_index + 1, dailyPivotR2, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid))
+            array.push(lineIds, line.new(bar_index, dailyPivotS2, bar_index + 1, dailyPivotS2, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid))
+            array.push(lineIds, line.new(bar_index, dailyPivotR3, bar_index + 1, dailyPivotR3, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid))
+            array.push(lineIds, line.new(bar_index, dailyPivotS3, bar_index + 1, dailyPivotS3, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid))
+        if plotPrevDayHighLow
+            array.push(lineIds, line.new(bar_index, prevDayHigh, bar_index + 1, prevDayHigh, xloc.bar_index, extend.both, color = highPriceLevelColor, style = line.style_dotted, width = 2))
+            array.push(lineIds, line.new(bar_index, prevDayLow, bar_index + 1, prevDayLow, xloc.bar_index, extend.both, color = lowPriceLevelColor, style = line.style_dotted, width = 2))
+        if plotDailyOpeningPrint
+            array.push(lineIds, line.new(bar_index, currentDayOpen, bar_index + 1, currentDayOpen, xloc.bar_index, extend.both, color = openingPrintColor, style = line.style_dotted, width = 2))
+    
+    // Plot weekly automatic levels
+    if plotPrevWeekHighLow or plotWeeklyOpeningPrint or plotWeeklyPivotLevels
+        [prevWeekHigh, prevWeekLow, currentWeekOpen, prevWeekClose] = getHigherTimeframeData("W")
+        if plotWeeklyPivotLevels
+            weeklySR1 = (prevWeekHigh - prevWeekLow) * 0.382
+            weeklySR2 = (prevWeekHigh - prevWeekLow) * 0.618
+            weeklySR3 = prevWeekHigh - prevWeekLow
+            weeklyPivotPP = (prevWeekHigh + prevWeekLow + prevWeekClose) / 3
+            weeklyPivotR1 = weeklyPivotPP + weeklySR1
+            weeklyPivotS1 = weeklyPivotPP - weeklySR1
+            weeklyPivotR2 = weeklyPivotPP + weeklySR2
+            weeklyPivotS2 = weeklyPivotPP - weeklySR2
+            weeklyPivotR3 = weeklyPivotPP + weeklySR3
+            weeklyPivotS3 = weeklyPivotPP - weeklySR3
+            array.push(lineIds, line.new(bar_index, weeklyPivotPP, bar_index + 1, weeklyPivotPP, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 2))
+            array.push(lineIds, line.new(bar_index, weeklyPivotR1, bar_index + 1, weeklyPivotR1, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 2))
+            array.push(lineIds, line.new(bar_index, weeklyPivotS1, bar_index + 1, weeklyPivotS1, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 2))
+            array.push(lineIds, line.new(bar_index, weeklyPivotR2, bar_index + 1, weeklyPivotR2, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 2))
+            array.push(lineIds, line.new(bar_index, weeklyPivotS2, bar_index + 1, weeklyPivotS2, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 2))
+            array.push(lineIds, line.new(bar_index, weeklyPivotR3, bar_index + 1, weeklyPivotR3, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 2))
+            array.push(lineIds, line.new(bar_index, weeklyPivotS3, bar_index + 1, weeklyPivotS3, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 2))
+        if plotPrevWeekHighLow
+            array.push(lineIds, line.new(bar_index, prevWeekHigh, bar_index + 1, prevWeekHigh, xloc.bar_index, extend.both, color = highPriceLevelColor, style = line.style_dotted, width = 3))
+            array.push(lineIds, line.new(bar_index, prevWeekLow, bar_index + 1, prevWeekLow, xloc.bar_index, extend.both, color = lowPriceLevelColor, style = line.style_dotted, width = 3))
+        if plotWeeklyOpeningPrint
+            array.push(lineIds, line.new(bar_index, currentWeekOpen, bar_index + 1, currentWeekOpen, xloc.bar_index, extend.both, color = openingPrintColor, style = line.style_dotted, width = 3))
+
+    // Plot monthly automatic levels
+    if plotPrevMonthHighLow or plotMonthlyOpeningPrint or plotMonthlyPivotLevels
+        [prevMonthHigh, prevMonthLow, currentMonthOpen, prevMonthClose] = getHigherTimeframeData("M")
+        if plotMonthlyPivotLevels
+            monthlySR1 = (prevMonthHigh - prevMonthLow) * 0.382
+            monthlySR2 = (prevMonthHigh - prevMonthLow) * 0.618
+            monthlySR3 = prevMonthHigh - prevMonthLow
+            monthlyPivotPP = (prevMonthHigh + prevMonthLow + prevMonthClose) / 3
+            monthlyPivotR1 = monthlyPivotPP + monthlySR1
+            monthlyPivotS1 = monthlyPivotPP - monthlySR1
+            monthlyPivotR2 = monthlyPivotPP + monthlySR2
+            monthlyPivotS2 = monthlyPivotPP - monthlySR2
+            monthlyPivotR3 = monthlyPivotPP + monthlySR3
+            monthlyPivotS3 = monthlyPivotPP - monthlySR3
+            array.push(lineIds, line.new(bar_index, monthlyPivotPP, bar_index + 1, monthlyPivotPP, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 3))
+            array.push(lineIds, line.new(bar_index, monthlyPivotR1, bar_index + 1, monthlyPivotR1, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 3))
+            array.push(lineIds, line.new(bar_index, monthlyPivotS1, bar_index + 1, monthlyPivotS1, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 3))
+            array.push(lineIds, line.new(bar_index, monthlyPivotR2, bar_index + 1, monthlyPivotR2, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 3))
+            array.push(lineIds, line.new(bar_index, monthlyPivotS2, bar_index + 1, monthlyPivotS2, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 3))
+            array.push(lineIds, line.new(bar_index, monthlyPivotR3, bar_index + 1, monthlyPivotR3, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 3))
+            array.push(lineIds, line.new(bar_index, monthlyPivotS3, bar_index + 1, monthlyPivotS3, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 3))
+        if plotPrevMonthHighLow
+            array.push(lineIds, line.new(bar_index, prevMonthHigh, bar_index + 1, prevMonthHigh, xloc.bar_index, extend.both, color = highPriceLevelColor, style = line.style_dotted, width = 5))
+            array.push(lineIds, line.new(bar_index, prevMonthLow, bar_index + 1, prevMonthLow, xloc.bar_index, extend.both, color = lowPriceLevelColor, style = line.style_dotted, width = 5))
+        if plotMonthlyOpeningPrint
+            array.push(lineIds, line.new(bar_index, currentMonthOpen, bar_index + 1, currentMonthOpen, xloc.bar_index, extend.both, color = openingPrintColor, style = line.style_dotted, width = 5))
+    
+    // Plot yearly automatic levels
     if plotYearlyPivotLevels
-        // Calculate and plot yearly pivot levels
+        [prevYearHigh, prevYearLow, currentYearOpen, prevYearClose] = getHigherTimeframeData("12M")
         yearlySR1 = (prevYearHigh - prevYearLow) * 0.382
         yearlySR2 = (prevYearHigh - prevYearLow) * 0.618
         yearlySR3 = prevYearHigh - prevYearLow
@@ -346,31 +358,22 @@ if barIsLastAndNotExecutedDailyLogic
         array.push(lineIds, line.new(bar_index, yearlyPivotR3, bar_index + 1, yearlyPivotR3, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 5))
         array.push(lineIds, line.new(bar_index, yearlyPivotS3, bar_index + 1, yearlyPivotS3, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 5))
 
-if barIsLastAndNotExecutedDailyLogic and (timeframe.isintraday or timeframe.isdaily)
-    if showDailyGaps
-        clearBoxes()
-        for [key, value] in dailyGaps
-            gapHighAndLow = str.split(value, ",")
-            gapHigh = str.tonumber(array.get(gapHighAndLow, 0))
-            gapLow = str.tonumber(array.get(gapHighAndLow, 1))
-            array.push(lineIds, line.new(key, gapHigh, time, gapHigh, width=dailyGapBorderWidth, color=dailyGapBorderColor, extend=extend.right, xloc=xloc.bar_time))
-            array.push(lineIds, line.new(key, gapLow, time, gapLow, width=dailyGapBorderWidth, color=dailyGapBorderColor, extend=extend.right, xloc=xloc.bar_time))
-            array.push(boxIds, box.new(key, gapHigh, time, gapLow, border_width=0, extend=extend.right, xloc=xloc.bar_time, bgcolor=dailyGapColor))
-        executedDailyLogic := true
+    // Plot daily gaps
+    if timeframe.isintraday or timeframe.isdaily
+        if showDailyGaps
+            clearBoxes()
+            gapEnd = time + timeframe.in_seconds()
+            for [key, value] in dailyGaps
+                gapHighAndLow = str.split(value, ",")
+                gapHigh = str.tonumber(array.get(gapHighAndLow, 0))
+                gapLow = str.tonumber(array.get(gapHighAndLow, 1))
+                array.push(lineIds, line.new(key, gapHigh, gapEnd, gapHigh, width=dailyGapBorderWidth, color=dailyGapBorderColor, extend=extend.right, xloc=xloc.bar_time))
+                array.push(lineIds, line.new(key, gapLow, gapEnd, gapLow, width=dailyGapBorderWidth, color=dailyGapBorderColor, extend=extend.right, xloc=xloc.bar_time))
+                array.push(boxIds, box.new(key, gapHigh, gapEnd, gapLow, border_width=0, extend=extend.right, xloc=xloc.bar_time, bgcolor=dailyGapColor))
+            executedDailyLogic := true
 
 if barstate.islast
     prevMarketSession := getSession()
-
-// Plot prev day, week, and month high/low and the current month, week, and day opening print
-plot(prevMonthHigh, style=plot.style_circles, color=highPriceLevelColor, linewidth=5, trackprice = true, show_last = 1, offset = -99999)
-plot(prevMonthLow, style=plot.style_circles, color=lowPriceLevelColor, linewidth=5, trackprice = true, show_last = 1, offset = -99999)
-plot(prevWeekHigh, style=plot.style_circles, color=highPriceLevelColor, linewidth=3, trackprice = true, show_last = 1, offset = -99999)
-plot(prevWeekLow, style=plot.style_circles, color=lowPriceLevelColor, linewidth=3, trackprice = true, show_last = 1, offset = -99999)
-plot(prevDayHigh, style=plot.style_circles, color=highPriceLevelColor, linewidth=2, trackprice = true, show_last = 1, offset = -99999)
-plot(prevDayLow, style=plot.style_circles, color=lowPriceLevelColor, linewidth=2, trackprice = true, show_last = 1, offset = -99999)
-plot(monthlyOpeningPrint, style=plot.style_circles, color=openingPrintColor, linewidth=5, trackprice = true, show_last = 1, offset = -99999)
-plot(weeklyOpeningPrint, style=plot.style_circles, color=openingPrintColor, linewidth=3, trackprice = true, show_last = 1, offset = -99999)
-plot(dailyOpeningPrint, style=plot.style_circles, color=openingPrintColor, linewidth=2, trackprice = true, show_last = 1, offset = -99999)
 
 // Plot hammers
 plotshape(showHammers and isHammer and not highVolume and not bullishVolumeAnomaly, style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="H")
