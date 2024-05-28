@@ -86,11 +86,12 @@ if not usingSMA
 
     var bool isFuture = str.endswith(syminfo.ticker, "!") and syminfo.type == "futures"
     bool isFutureRegularSession = not na(time(timeframe.period, futuresRegularSession))
-    if volumeMedianSessionData == "Extended" and (session.ispremarket or session.ispostmarket or (isFuture and not isFutureRegularSession))
+    
+    if volumeMedianSessionData == "Extended" and (session.ispremarket or session.ispostmarket or (isFuture and (isFutureRegularSession or timeframe.isdwm)))
         if extendedMarketVolume.size() == volumeMetricLength
             extendedMarketVolume.shift()
         array.push(extendedMarketVolume, volume)
-    else if (session.ismarket and not isFuture) or (isFuture and isFutureRegularSession)
+    else if (session.ismarket and not isFuture) or (isFuture and (isFutureRegularSession or timeframe.isdwm))
         if regularMarketVolume.size() == volumeMetricLength
             regularMarketVolume.shift()
         array.push(regularMarketVolume, volume)
@@ -98,7 +99,7 @@ if not usingSMA
     if volumeMedianSessionData == "Regular"
         medianVolume := array.median(regularMarketVolume)
     else if volumeMedianSessionData == "Extended"
-        if (session.ismarket and not isFuture) or (isFuture and isFutureRegularSession)
+        if (session.ismarket and not isFuture) or (isFuture and (isFutureRegularSession or timeframe.isdwm))
             medianVolume := array.median(regularMarketVolume)
         else
             medianVolume := array.median(extendedMarketVolume)
