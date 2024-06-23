@@ -18,7 +18,7 @@ showHVAnomalies = input.bool(true, title="Show High Volume Anomalies")
 showLVAnomalies = input.bool(true, title="Show Low Volume Anomalies")
 highVolumeThreshold = input(2.0, title="High Volume Threshold")
 volumeMetric = input.string("Median", title="Acceptable Volume Metric", options = ['SMA', 'Median'])
-acceptableVolumeThreshold = input(0.5, title="Acceptable Volume Threshold")
+acceptableVolumeThreshold = input(0.25, title="Acceptable Volume Threshold")
 volumeMetricLength = input.int(50, minval=10, maxval=500,title="Volume Metric Length")
 volumeMedianSessionData = input.string("Extended", title = "Volume Median Session Data", options = ['Regular', 'Extended'])
 futuresRegularSession = input("0830-1500:23456", title = "Futures Regular Session")
@@ -261,9 +261,9 @@ if barIsLastAndNotExecutedDailyLogic
     if plotPrevDayHighLow or plotDailyOpeningPrint or plotDailyPivotLevels
         [prevDayHigh, prevDayLow, currentDayOpen, prevDayClose] = getHigherTimeframeData("D")
         if plotDailyPivotLevels
-            dailySR1 = (prevDayHigh - prevDayLow) * 0.382
-            dailySR2 = (prevDayHigh - prevDayLow) * 0.618
             dailySR3 = prevDayHigh - prevDayLow
+            dailySR1 = dailySR3 * 0.382
+            dailySR2 = dailySR3 * 0.618
             dailyPivotPP = (prevDayHigh + prevDayLow + prevDayClose) / 3
             dailyPivotR1 = dailyPivotPP + dailySR1
             dailyPivotS1 = dailyPivotPP - dailySR1
@@ -288,9 +288,9 @@ if barIsLastAndNotExecutedDailyLogic
     if plotPrevWeekHighLow or plotWeeklyOpeningPrint or plotWeeklyPivotLevels
         [prevWeekHigh, prevWeekLow, currentWeekOpen, prevWeekClose] = getHigherTimeframeData("W")
         if plotWeeklyPivotLevels
-            weeklySR1 = (prevWeekHigh - prevWeekLow) * 0.382
-            weeklySR2 = (prevWeekHigh - prevWeekLow) * 0.618
             weeklySR3 = prevWeekHigh - prevWeekLow
+            weeklySR1 = weeklySR3 * 0.382
+            weeklySR2 = weeklySR3 * 0.618
             weeklyPivotPP = (prevWeekHigh + prevWeekLow + prevWeekClose) / 3
             weeklyPivotR1 = weeklyPivotPP + weeklySR1
             weeklyPivotS1 = weeklyPivotPP - weeklySR1
@@ -315,9 +315,9 @@ if barIsLastAndNotExecutedDailyLogic
     if plotPrevMonthHighLow or plotMonthlyOpeningPrint or plotMonthlyPivotLevels
         [prevMonthHigh, prevMonthLow, currentMonthOpen, prevMonthClose] = getHigherTimeframeData("M")
         if plotMonthlyPivotLevels
-            monthlySR1 = (prevMonthHigh - prevMonthLow) * 0.382
-            monthlySR2 = (prevMonthHigh - prevMonthLow) * 0.618
             monthlySR3 = prevMonthHigh - prevMonthLow
+            monthlySR1 = monthlySR3 * 0.382
+            monthlySR2 = monthlySR3 * 0.618
             monthlyPivotPP = (prevMonthHigh + prevMonthLow + prevMonthClose) / 3
             monthlyPivotR1 = monthlyPivotPP + monthlySR1
             monthlyPivotS1 = monthlyPivotPP - monthlySR1
@@ -341,9 +341,9 @@ if barIsLastAndNotExecutedDailyLogic
     // Plot yearly automatic levels
     if plotYearlyPivotLevels
         [prevYearHigh, prevYearLow, currentYearOpen, prevYearClose] = getHigherTimeframeData("12M")
-        yearlySR1 = (prevYearHigh - prevYearLow) * 0.382
-        yearlySR2 = (prevYearHigh - prevYearLow) * 0.618
         yearlySR3 = prevYearHigh - prevYearLow
+        yearlySR1 = yearlySR3 * 0.382
+        yearlySR2 = yearlySR3 * 0.618
         yearlyPivotPP = (prevYearHigh + prevYearLow + prevYearClose) / 3
         yearlyPivotR1 = yearlyPivotPP + yearlySR1
         yearlyPivotS1 = yearlyPivotPP - yearlySR1
