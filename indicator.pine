@@ -6,27 +6,26 @@ indicator("Volume Price Analysis Indicator", shorttitle="VPA Indicator", overlay
 // User Inputs
 showHammers = input.bool(true, title="Show Hammers")
 showShooters = input.bool(true, title="Show Shooters")
-hammerBodyToTotalRatio = input(1.5, title="Hammer/Shooter Long Wick to Body Ratio")
-upperWickToBodyRatio = input(1.0, title="Hammer/Shooter Short Wick to Body Ratio")
+hammerBodyToTotalRatio = input(1.5, title="Hammer/Shooter Long Wick to Body Ratio", tooltip="Set the ratio of the long wick to the body for identifying hammers and shooters.")
+upperWickToBodyRatio = input(1.0, title="Hammer/Shooter Short Wick to Body Ratio", tooltip="Set the ratio of the short wick to the body for identifying hammers and shooters.")
 showDojis = input.bool(true, title="Show Dojis")
-dojiBodyToTotalRatio = input(0.13, title="Doji Body to High/Low Ratio")
-showMomentum = input.bool(true, title="Show Momentum Bars")
-atrThreshold = input(1.5, title="Momentum Bar ATR Threshold")
-atrLength = input(14, title="ATR Length")
-acceptableVolatilityThreshold = input(0.5, title="Acceptable Volatility Threshold")
+dojiBodyToTotalRatio = input(0.13, title="Doji Body to High/Low Ratio", tooltip="Set the maximum body-to-high/low ratio for identifying doji candlesticks.")
+showMomentum = input.bool(true, title="Show Momentum")
+atrThreshold = input(1.5, title="Momentum Bar ATR Threshold", tooltip="Set the threshold for identifying momentum candlesticks as a multiple of the ATR (e.g., 1.5x ATR).")
+atrLength = input(14, title="ATR Length", tooltip="Set the length of the ATR calculation.")
+acceptableVolatilityThreshold = input(0.5, title="Acceptable Volatility Threshold", tooltip="Set the minimum volatility threshold as a multiple of the ATR (e.g., 0.5x ATR). Candlesticks with volatility below this threshold will not display candlestick indications.")
 showHVAnomalies = input.bool(true, title="Show High Volume Anomalies")
 showLVAnomalies = input.bool(true, title="Show Low Volume Anomalies")
-highVolumeThreshold = input(2.0, title="High Volume Threshold")
-volumeMetric = input.string("Median", title="Acceptable Volume Metric", options = ['SMA', 'Median'])
-acceptableVolumeThreshold = input(0.25, title="Acceptable Volume Threshold")
-volumeMetricLength = input.int(50, minval=10, maxval=500,title="Volume Metric Length")
-volumeMedianSessionData = input.string("Extended", title = "Volume Median Session Data", options = ['Regular', 'Extended'])
-futuresRegularSession = input("0830-1500:23456", title = "Futures Regular Session")
+acceptableVolumeThreshold = input(0.25, title="Acceptable Volume Threshold", tooltip="Set the minimum volume threshold as a multiple of the volume metric (e.g., 0.25x metric volume). Candlesticks with volume below this threshold will not display candlestick indications.")
+volumeMetric = input.string("Baseline", title="Acceptable Volume Metric", options=['SMA', 'Baseline'], tooltip="Select the type of volume metric: Simple Moving Average (SMA) or the proprietary Baseline.")
+volumeMetricLength = input.int(50, minval=10, maxval=500, title="Volume Metric Length", tooltip="Set the length for the volume metric calculation.")
+volumeMedianSessionData = input.string("Extended", title="Volume Baseline Session Data", options=['Regular', 'Extended'], tooltip="Choose the session data type for calculating the volume baseline: Regular or Extended.")
+futuresRegularSession = input("0830-1500:23456", title="Futures Regular Session", tooltip="Define the regular trading session hours for futures.")
 showDailyGaps = input.bool(true, title="Show Daily Gaps")
-gapLookback = input.int(200, minval=10, maxval=500, title="Gap Lookback")
+gapLookback = input.int(200, minval=10, maxval=500, title="Gap Lookback", tooltip="Set the lookback period for identifying daily gaps.")
 dailyGapColor = input(color.rgb(255, 255, 255, 95), title="Daily Gap Color")
 dailyGapBorderColor = input(color.rgb(255, 255, 255, 30), title="Daily Gap Border Color")
-dailyGapBorderWidth = input(2, title="Daily Gap Border Width")
+dailyGapBorderWidth = input(2, title="Daily Gap Border Width", tooltip="Set the width of the border around daily gaps.")
 plotPrevMonthHighLow = input.bool(true, title="Plot Previous Month High/Low")
 plotPrevWeekHighLow = input.bool(true, title="Plot Previous Week High/Low")
 plotPrevDayHighLow = input.bool(true, title="Plot Previous Day High/Low")
@@ -37,16 +36,18 @@ plotYearlyPivotLevels = input.bool(true, title="Plot Yearly Pivot Levels")
 plotMonthlyPivotLevels = input.bool(true, title="Plot Monthly Pivot Levels")
 plotWeeklyPivotLevels = input.bool(true, title="Plot Weekly Pivot Levels")
 plotDailyPivotLevels = input.bool(true, title="Plot Daily Pivot Levels")
-hideDailyAutomaticLevelsHigherThan = input.timeframe("15", title = "Hide Daily Automatic Price Levels Above")
-hideWeeklyAutomaticLevelsHigherThan = input.timeframe("60", title = "Hide Weekly Automatic Price Levels Above")
-hideAllAutomaticLevelsHigherThan = input.timeframe("D", title = "Hide All Automatic Price Levels Above")
+hideDailyAutomaticLevelsHigherThan = input.timeframe("15", title="Hide Daily Automatic Price Levels Above", tooltip="Specify the timeframe above which daily automatic price levels should be hidden.")
+hideWeeklyAutomaticLevelsHigherThan = input.timeframe("60", title="Hide Weekly Automatic Price Levels Above", tooltip="Specify the timeframe above which weekly automatic price levels should be hidden.")
+hideMonthlyAutomaticLevelsHigherThan = input.timeframe("D", title="Hide Monthly Automatic Price Levels Above", tooltip="Specify the timeframe above which monthly automatic price levels should be hidden.")
+hideAllAutomaticLevelsHigherThan = input.timeframe("W", title="Hide All Automatic Price Levels Above", tooltip="Specify the timeframe above which all automatic price levels should be hidden.")
 highPriceLevelColor  = input(color.rgb(8, 153, 129), title="High Price Level Color")
-lowPriceLevelColor  = input(color.rgb(242, 54, 69), title ="Low Price Level Color")
+lowPriceLevelColor  = input(color.rgb(242, 54, 69), title="Low Price Level Color")
 openingPrintColor = input(color.rgb(243, 152, 15), title="Opening Print Color")
 pivotLevelColor = input(color.rgb(240, 98, 146), title="Pivot Level Color")
 
 var bool hideDailyAutomaticLevels = (timeframe.in_seconds(hideDailyAutomaticLevelsHigherThan) / 60) < (timeframe.in_seconds() / 60)
 var bool hideWeeklyAutomaticLevels = (timeframe.in_seconds(hideWeeklyAutomaticLevelsHigherThan) / 60) < (timeframe.in_seconds() / 60)
+var bool hideMonthlyAutomaticLevels = (timeframe.in_seconds(hideMonthlyAutomaticLevelsHigherThan) / 60) < (timeframe.in_seconds() / 60)
 var bool hideAllAutomaticLevels = (timeframe.in_seconds(hideAllAutomaticLevelsHigherThan) / 60) < (timeframe.in_seconds() / 60)
 
 if hideAllAutomaticLevels
@@ -57,6 +58,16 @@ if hideAllAutomaticLevels
     plotWeeklyOpeningPrint := false
     plotDailyOpeningPrint := false
     plotYearlyPivotLevels := false
+    plotMonthlyPivotLevels := false
+    plotWeeklyPivotLevels := false
+    plotDailyPivotLevels := false
+else if hideMonthlyAutomaticLevels
+    plotPrevMonthHighLow := false
+    plotPrevWeekHighLow := false
+    plotPrevDayHighLow := false
+    plotMonthlyOpeningPrint := false
+    plotWeeklyOpeningPrint := false
+    plotDailyOpeningPrint := false
     plotMonthlyPivotLevels := false
     plotWeeklyPivotLevels := false
     plotDailyPivotLevels := false
@@ -104,7 +115,6 @@ if not usingSMA
         else
             medianVolume := array.median(extendedMarketVolume)
 sufficientVolume = usingSMA ? volume > volumeSMA * acceptableVolumeThreshold : volume > medianVolume * acceptableVolumeThreshold
-highVolume = usingSMA ? volume > volumeSMA * highVolumeThreshold : volume > medianVolume * highVolumeThreshold
 volumeLessThanMetric = usingSMA ? volume < volumeSMA : volume < medianVolume
 
 if na(sufficientVolume)
@@ -374,42 +384,24 @@ if barstate.islast
     prevMarketSession := getSession()
 
 // Plot hammers
-plotshape(showHammers and isHammer and not highVolume and not bullishVolumeAnomaly, style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="H")
-plotshape(showHammers and isHammer and highVolume and not bullishVolumeAnomaly, style=shape.triangleup, location=location.belowbar, textcolor=color.rgb(255, 255, 255), color=color.rgb(211, 48, 176), text="H!")
-
-plotshape(showHammers and isHammer and not highVolume and bullishVolumeAnomaly, style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="HA")
-plotshape(showHammers and isHammer and highVolume and bullishVolumeAnomaly, style=shape.triangleup, location=location.belowbar, textcolor=color.rgb(255, 255, 255), color=color.rgb(211, 48, 176), text="HA!")
+plotshape(showHammers and isHammer and not bullishVolumeAnomaly, style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="H")
+plotshape(showHammers and isHammer and bullishVolumeAnomaly, style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="HA")
 
 // Plot shooters
-plotshape(showShooters and isShooter and not highVolume and not bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, color=color.rgb(255, 155, 93), textcolor=color.rgb(255, 255, 255), text="S")
-plotshape(showShooters and isShooter and highVolume and not bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, textcolor=color.rgb(255, 255, 255), color=color.rgb(255, 155, 93), text="S!")
-
-plotshape(showShooters and isShooter and not highVolume and bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, color=color.rgb(255, 155, 93), textcolor=color.rgb(255, 255, 255), text="SA")
-plotshape(showShooters and isShooter and highVolume and bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, textcolor=color.rgb(255, 255, 255), color=color.rgb(255, 155, 93), text="SA!")
+plotshape(showShooters and isShooter and not bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, color=color.rgb(255, 155, 93), textcolor=color.rgb(255, 255, 255), text="S")
+plotshape(showShooters and isShooter and bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, color=color.rgb(255, 155, 93), textcolor=color.rgb(255, 255, 255), text="SA")
 
 // Plots dojis
-plotshape(showDojis and isDoji and not highVolume and not higherVolumeThanPrev, style=shape.triangledown, location=location.abovebar, color=color.rgb(201, 55, 55), textcolor=color.rgb(255, 255, 255), text="D")
-plotshape(showDojis and isDoji and highVolume and not higherVolumeThanPrev, style=shape.triangledown, location=location.abovebar, textcolor=color.rgb(255, 255, 255), color=color.rgb(201, 55, 55), text="D!")
-
-plotshape(showDojis and isDoji and not highVolume and higherVolumeThanPrev, style=shape.triangledown, location=location.abovebar, color=color.rgb(201, 55, 55), textcolor=color.rgb(255, 255, 255), text="DA")
-plotshape(showDojis and isDoji and highVolume and higherVolumeThanPrev, style=shape.triangledown, location=location.abovebar, textcolor=color.rgb(255, 255, 255), color=color.rgb(201, 55, 55), text="DA!")
+plotshape(showDojis and isDoji and not higherVolumeThanPrev, style=shape.triangledown, location=location.abovebar, color=color.rgb(201, 55, 55), textcolor=color.rgb(255, 255, 255), text="D")
+plotshape(showDojis and isDoji and higherVolumeThanPrev, style=shape.triangledown, location=location.abovebar, color=color.rgb(201, 55, 55), textcolor=color.rgb(255, 255, 255), text="DA")
 
 // Plot momentum candles
-plotshape(showMomentum and bullishMomentumCandle and not highVolume, style=shape.triangleup, location=location.belowbar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="M")
-plotshape(showMomentum and bearishMomentumCandle and not highVolume, style=shape.triangledown, location=location.abovebar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="M")
-
-plotshape(showMomentum and bullishMomentumCandle and highVolume, style=shape.triangleup, location=location.belowbar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="M!")
-plotshape(showMomentum and bearishMomentumCandle and highVolume, style=shape.triangledown, location=location.abovebar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="M!")
+plotshape(showMomentum and bullishMomentumCandle, style=shape.triangleup, location=location.belowbar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="M")
+plotshape(showMomentum and bearishMomentumCandle, style=shape.triangledown, location=location.abovebar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="M")
 
 // Plot volume anomalies
-plotshape(showHVAnomalies and bullishHighVolumeAnomaly and notDojiHammerOrShooter and not highVolume, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A")
-plotshape(showHVAnomalies and bearishHighVolumeAnomaly and notDojiHammerOrShooter and not highVolume, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A")
+plotshape(showHVAnomalies and bullishHighVolumeAnomaly and notDojiHammerOrShooter, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A")
+plotshape(showHVAnomalies and bearishHighVolumeAnomaly and notDojiHammerOrShooter, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A")
 
-plotshape(showHVAnomalies and bullishHighVolumeAnomaly and notDojiHammerOrShooter and highVolume, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A!")
-plotshape(showHVAnomalies and bearishHighVolumeAnomaly and notDojiHammerOrShooter and highVolume, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A!")
-
-plotshape(showLVAnomalies and bullishLowVolumeAnomaly and notDojiHammerOrShooter and not highVolume, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A")
-plotshape(showLVAnomalies and bearishLowVolumeAnomaly and notDojiHammerOrShooter and not highVolume, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A")
-
-plotshape(showLVAnomalies and bullishLowVolumeAnomaly and notDojiHammerOrShooter and highVolume, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A!")
-plotshape(showLVAnomalies and bearishLowVolumeAnomaly and notDojiHammerOrShooter and highVolume, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A!")
+plotshape(showLVAnomalies and bullishLowVolumeAnomaly and notDojiHammerOrShooter, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A")
+plotshape(showLVAnomalies and bearishLowVolumeAnomaly and notDojiHammerOrShooter, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A")
