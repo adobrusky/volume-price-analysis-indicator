@@ -10,17 +10,15 @@ hammerBodyToTotalRatio = input(1.5, title="Hammer/Shooter Long Wick to Body Rati
 upperWickToBodyRatio = input(1.0, title="Hammer/Shooter Short Wick to Body Ratio", tooltip="Set the ratio of the short wick to the body for identifying hammers and shooters.")
 showDojis = input.bool(true, title="Show Dojis")
 dojiBodyToTotalRatio = input(0.13, title="Doji Body to High/Low Ratio", tooltip="Set the maximum body-to-high/low ratio for identifying doji candlesticks.")
+// showEngulfing = input.bool(true, title="Show Engulfing")
 showMomentum = input.bool(true, title="Show Momentum")
 atrThreshold = input(1.5, title="Momentum Bar ATR Threshold", tooltip="Set the threshold for identifying momentum candlesticks as a multiple of the ATR (e.g., 1.5x ATR).")
-atrLength = input(14, title="ATR Length", tooltip="Set the length of the ATR calculation.")
-acceptableVolatilityThreshold = input(0.5, title="Acceptable Volatility Threshold", tooltip="Set the minimum volatility threshold as a multiple of the ATR (e.g., 0.5x ATR). Candlesticks with volatility below this threshold will not display candlestick indications.")
 showHVAnomalies = input.bool(true, title="Show High Volume Anomalies")
 showLVAnomalies = input.bool(true, title="Show Low Volume Anomalies")
-acceptableVolumeThreshold = input(0.25, title="Acceptable Volume Threshold", tooltip="Set the minimum volume threshold as a multiple of the volume metric (e.g., 0.25x metric volume). Candlesticks with volume below this threshold will not display candlestick indications.")
-volumeMetric = input.string("Baseline", title="Acceptable Volume Metric", options=['SMA', 'Baseline'], tooltip="Select the type of volume metric: Simple Moving Average (SMA) or the proprietary Baseline.")
-volumeMetricLength = input.int(50, minval=10, maxval=500, title="Volume Metric Length", tooltip="Set the length for the volume metric calculation.")
-volumeMedianSessionData = input.string("Extended", title="Volume Baseline Session Data", options=['Regular', 'Extended'], tooltip="Choose the session data type for calculating the volume baseline: Regular or Extended.")
-futuresRegularSession = input("0830-1500:23456", title="Futures Regular Session", tooltip="Define the regular trading session hours for futures.")
+acceptableVolumeThreshold = input(0.25, title="Acceptable Volume Threshold", tooltip="Set the minimum volume threshold as a multiple of the volume average (e.g., 0.25x volume average). Candlesticks with volume below this threshold will not display candlestick indications.")
+volumeMetricLength = input.int(50, minval=10, maxval=500, title="Volume SMA Length", tooltip="Set the length for the volume SMA calculation.")
+acceptableVolatilityThreshold = input(0.5, title="Acceptable Volatility Threshold", tooltip="Set the minimum volatility threshold as a multiple of the ATR (e.g., 0.5x ATR). Candlesticks with volatility below this threshold will not display candlestick indications.")
+atrLength = input(14, title="ATR Length", tooltip="Set the length of the ATR calculation.")
 showDailyGaps = input.bool(true, title="Show Daily Gaps")
 gapLookback = input.int(200, minval=10, maxval=500, title="Gap Lookback", tooltip="Set the lookback period for identifying daily gaps.")
 dailyGapColor = input(color.rgb(255, 255, 255, 95), title="Daily Gap Color")
@@ -84,38 +82,11 @@ else if hideDailyAutomaticLevels
     plotDailyPivotLevels := false
 
 // Volume calculations
-usingSMA = volumeMetric == "SMA"
-volumeSMA = usingSMA ? ta.sma(volume, volumeMetricLength) : 0
+volumeSMA = ta.sma(volume, volumeMetricLength)
 higherVolumeThanPrev = volume > volume[1]
 lowerVolumeThanPrev = volume < volume[1]
-
-// Volume median calculation
-medianVolume = 0.0
-if not usingSMA
-    var float[] regularMarketVolume = array.new_float(volumeMetricLength)
-    var float[] extendedMarketVolume = array.new_float(volumeMetricLength)
-
-    var bool isFuture = str.endswith(syminfo.ticker, "!") and syminfo.type == "futures"
-    bool isFutureRegularSession = not na(time(timeframe.period, futuresRegularSession))
-    
-    if volumeMedianSessionData == "Extended" and (session.ispremarket or session.ispostmarket or (isFuture and (isFutureRegularSession or timeframe.isdwm)))
-        if extendedMarketVolume.size() == volumeMetricLength
-            extendedMarketVolume.shift()
-        array.push(extendedMarketVolume, volume)
-    else if (session.ismarket and not isFuture) or (isFuture and (isFutureRegularSession or timeframe.isdwm))
-        if regularMarketVolume.size() == volumeMetricLength
-            regularMarketVolume.shift()
-        array.push(regularMarketVolume, volume)
-
-    if volumeMedianSessionData == "Regular"
-        medianVolume := array.median(regularMarketVolume)
-    else if volumeMedianSessionData == "Extended"
-        if (session.ismarket and not isFuture) or (isFuture and (isFutureRegularSession or timeframe.isdwm))
-            medianVolume := array.median(regularMarketVolume)
-        else
-            medianVolume := array.median(extendedMarketVolume)
-sufficientVolume = usingSMA ? volume > volumeSMA * acceptableVolumeThreshold : volume > medianVolume * acceptableVolumeThreshold
-volumeLessThanMetric = usingSMA ? volume < volumeSMA : volume < medianVolume
+sufficientVolume = volume > volumeSMA * acceptableVolumeThreshold
+volumeLessThanMetric = volume < volumeSMA
 
 if na(sufficientVolume)
     sufficientVolume := true
@@ -133,6 +104,8 @@ sufficientVolatility = highLow >= atrValue * acceptableVolatilityThreshold
 bodyGreaterThanMomentumATRThreshold = body > atrValue * atrThreshold
 greenCandle = close > open
 redCandle = close < open
+// prevGreenCandle = close[1] > open[1]
+// prevRedCandle = close[1] < open[1]
 candleMidpoint = (high - (high - low) / 2)
 
 // Pre-computed conditions to avoid redundancy
@@ -148,7 +121,9 @@ isHammer = showHammers and isNotDojiAndSufficient and lowerWick >= body * hammer
 isShooter = showShooters and isNotDojiAndSufficient and upperWick >= body * hammerBodyToTotalRatio and bodyHigh <= candleMidpoint and lowerWick <= body * upperWickToBodyRatio
 bullishMomentumCandle = isMomentumCandleCondition and greenCandle and upperWick < body
 bearishMomentumCandle = isMomentumCandleCondition and redCandle and lowerWick < body
-notDojiHammerOrShooter = not isDoji and not isHammer and not isShooter
+// isBullishEngulfing = showEngulfing and greenCandle and close > high[1] and body > prevCandleBody and prevRedCandle
+// isBearishEngulfing = showEngulfing and redCandle and close < low[1] and body > prevCandleBody and prevGreenCandle
+notDojiHammerOrShooter = not isDoji and not isHammer and not isShooter // and not isBearishEngulfing and not isBullishEngulfing
 
 // High volume anomalies
 isHighVolumeAnomalyCondition = showHVAnomalies and higherVolumeThanPrev and sufficientVolumeAndVolatility
@@ -394,6 +369,13 @@ plotshape(showShooters and isShooter and bearishVolumeAnomaly, style=shape.trian
 // Plots dojis
 plotshape(showDojis and isDoji and not higherVolumeThanPrev, style=shape.triangledown, location=location.abovebar, color=color.rgb(201, 55, 55), textcolor=color.rgb(255, 255, 255), text="D")
 plotshape(showDojis and isDoji and higherVolumeThanPrev, style=shape.triangledown, location=location.abovebar, color=color.rgb(201, 55, 55), textcolor=color.rgb(255, 255, 255), text="DA")
+
+// Plot engulfing candles
+// plotshape(showEngulfing and isBullishEngulfing and not bullishVolumeAnomaly, style=shape.triangleup, location=location.belowbar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="E")
+// plotshape(showEngulfing and isBullishEngulfing and bullishVolumeAnomaly, style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="EA")
+// plotshape(showEngulfing and isBearishEngulfing and not bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="E")
+// plotshape(showEngulfing and isBearishEngulfing and bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, color=color.rgb(255, 155, 93), textcolor=color.rgb(255, 255, 255), text="EA")
+
 
 // Plot momentum candles
 plotshape(showMomentum and bullishMomentumCandle, style=shape.triangleup, location=location.belowbar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="M")
