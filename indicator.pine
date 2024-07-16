@@ -10,12 +10,10 @@ hammerBodyToTotalRatio = input(1.5, title="Hammer/Shooter Long Wick to Body Rati
 upperWickToBodyRatio = input(1.0, title="Hammer/Shooter Short Wick to Body Ratio", tooltip="Set the ratio of the short wick to the body for identifying hammers and shooters.")
 showDojis = input.bool(true, title="Show Dojis")
 dojiBodyToTotalRatio = input(0.13, title="Doji Body to High/Low Ratio", tooltip="Set the maximum body-to-high/low ratio for identifying doji candlesticks.")
-// showEngulfing = input.bool(true, title="Show Engulfing")
-showMomentum = input.bool(true, title="Show Momentum")
-atrThreshold = input(1.5, title="Momentum Bar ATR Threshold", tooltip="Set the threshold for identifying momentum candlesticks as a multiple of the ATR (e.g., 1.5x ATR).")
+showEngulfing = input.bool(true, title="Show Engulfing")
 showHVAnomalies = input.bool(true, title="Show High Volume Anomalies")
 showLVAnomalies = input.bool(true, title="Show Low Volume Anomalies")
-acceptableVolumeThreshold = input(0.25, title="Acceptable Volume Threshold", tooltip="Set the minimum volume threshold as a multiple of the volume average (e.g., 0.25x volume average). Candlesticks with volume below this threshold will not display candlestick indications.")
+acceptableVolumeThreshold = input(0.5, title="Acceptable Volume Threshold", tooltip="Set the minimum volume threshold as a multiple of the volume average (e.g., 0.25x volume average). Candlesticks with volume below this threshold will not display candlestick indications.")
 volumeMetricLength = input.int(50, minval=10, maxval=500, title="Volume SMA Length", tooltip="Set the length for the volume SMA calculation.")
 acceptableVolatilityThreshold = input(0.5, title="Acceptable Volatility Threshold", tooltip="Set the minimum volatility threshold as a multiple of the ATR (e.g., 0.5x ATR). Candlesticks with volatility below this threshold will not display candlestick indications.")
 atrLength = input(14, title="ATR Length", tooltip="Set the length of the ATR calculation.")
@@ -101,29 +99,26 @@ lowerWick = bodyLow - low
 prevCandleBody = math.abs(close[1] - open[1])
 atrValue = ta.atr(atrLength)
 sufficientVolatility = highLow >= atrValue * acceptableVolatilityThreshold
-bodyGreaterThanMomentumATRThreshold = body > atrValue * atrThreshold
+bodyGreaterThanATRThreshold = body > atrValue * 1.5
 greenCandle = close > open
 redCandle = close < open
-// prevGreenCandle = close[1] > open[1]
-// prevRedCandle = close[1] < open[1]
+prevGreenCandle = close[1] > open[1]
+prevRedCandle = close[1] < open[1]
 candleMidpoint = (high - (high - low) / 2)
 
 // Pre-computed conditions to avoid redundancy
 sufficientVolumeAndVolatility = sufficientVolume and sufficientVolatility
 isVolumeNAorHigher = na(volume) or higherVolumeThanPrev
 isLowerVolumeThanPrevAndVolatility = lowerVolumeThanPrev and sufficientVolumeAndVolatility
-isMomentumCandleCondition = showMomentum and sufficientVolume and isVolumeNAorHigher and bodyGreaterThanMomentumATRThreshold
 
 // Determine candle types
 isDoji = showDojis and sufficientVolumeAndVolatility and body <= highLow * dojiBodyToTotalRatio
 isNotDojiAndSufficient = not isDoji and sufficientVolumeAndVolatility
 isHammer = showHammers and isNotDojiAndSufficient and lowerWick >= body * hammerBodyToTotalRatio and bodyLow >= candleMidpoint and upperWick <= body * upperWickToBodyRatio
 isShooter = showShooters and isNotDojiAndSufficient and upperWick >= body * hammerBodyToTotalRatio and bodyHigh <= candleMidpoint and lowerWick <= body * upperWickToBodyRatio
-bullishMomentumCandle = isMomentumCandleCondition and greenCandle and upperWick < body
-bearishMomentumCandle = isMomentumCandleCondition and redCandle and lowerWick < body
-// isBullishEngulfing = showEngulfing and greenCandle and close > high[1] and body > prevCandleBody and prevRedCandle
-// isBearishEngulfing = showEngulfing and redCandle and close < low[1] and body > prevCandleBody and prevGreenCandle
-notDojiHammerOrShooter = not isDoji and not isHammer and not isShooter // and not isBearishEngulfing and not isBullishEngulfing
+isBullishEngulfing = showEngulfing and isNotDojiAndSufficient and greenCandle and close >= open[1] and body >= prevCandleBody and prevRedCandle and ((body / 3) >= upperWick + lowerWick)
+isBearishEngulfing = showEngulfing and isNotDojiAndSufficient and redCandle and close <= open[1] and body >= prevCandleBody and prevGreenCandle and ((body / 3) >= upperWick + lowerWick)
+notCandlestickIndication = not isDoji and not isHammer and not isShooter and not isBearishEngulfing and not isBullishEngulfing
 
 // High volume anomalies
 isHighVolumeAnomalyCondition = showHVAnomalies and higherVolumeThanPrev and sufficientVolumeAndVolatility
@@ -131,7 +126,7 @@ bullishHighVolumeAnomaly = isHighVolumeAnomalyCondition and redCandle and close[
 bearishHighVolumeAnomaly = isHighVolumeAnomalyCondition and greenCandle and close[1] > open[1] and body < prevCandleBody
 
 // Low volume anomalies
-isLowVolumeAnomalyCondition = showLVAnomalies and volumeLessThanMetric and isLowerVolumeThanPrevAndVolatility and bodyGreaterThanMomentumATRThreshold
+isLowVolumeAnomalyCondition = showLVAnomalies and volumeLessThanMetric and isLowerVolumeThanPrevAndVolatility and bodyGreaterThanATRThreshold
 bullishLowVolumeAnomaly = isLowVolumeAnomalyCondition and redCandle
 bearishLowVolumeAnomaly = isLowVolumeAnomalyCondition and greenCandle
 
@@ -371,19 +366,14 @@ plotshape(isDoji and not higherVolumeThanPrev, style=shape.triangledown, locatio
 plotshape(isDoji and higherVolumeThanPrev, style=shape.triangledown, location=location.abovebar, color=color.rgb(201, 55, 55), textcolor=color.rgb(255, 255, 255), text="DA")
 
 // Plot engulfing candles
-// plotshape(isBullishEngulfing and not bullishVolumeAnomaly, style=shape.triangleup, location=location.belowbar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="E")
-// plotshape(isBullishEngulfing and bullishVolumeAnomaly, style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="EA")
-// plotshape(isBearishEngulfing and not bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="E")
-// plotshape(isBearishEngulfing and bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, color=color.rgb(255, 155, 93), textcolor=color.rgb(255, 255, 255), text="EA")
-
-
-// Plot momentum candles
-plotshape(bullishMomentumCandle, style=shape.triangleup, location=location.belowbar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="M")
-plotshape(bearishMomentumCandle, style=shape.triangledown, location=location.abovebar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="M")
+plotshape(isBullishEngulfing and not bullishVolumeAnomaly, style=shape.triangleup, location=location.belowbar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="E")
+plotshape(isBullishEngulfing and bullishVolumeAnomaly, style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="EA")
+plotshape(isBearishEngulfing and not bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="E")
+plotshape(isBearishEngulfing and bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, color=color.rgb(255, 155, 93), textcolor=color.rgb(255, 255, 255), text="EA")
 
 // Plot volume anomalies
-plotshape(bullishHighVolumeAnomaly and notDojiHammerOrShooter, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A")
-plotshape(bearishHighVolumeAnomaly and notDojiHammerOrShooter, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A")
+plotshape(bullishHighVolumeAnomaly and notCandlestickIndication, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A")
+plotshape(bearishHighVolumeAnomaly and notCandlestickIndication, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A")
 
-plotshape(bullishLowVolumeAnomaly and notDojiHammerOrShooter, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A")
-plotshape(bearishLowVolumeAnomaly and notDojiHammerOrShooter, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A")
+plotshape(bullishLowVolumeAnomaly and notCandlestickIndication, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A")
+plotshape(bearishLowVolumeAnomaly and notCandlestickIndication, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A")
