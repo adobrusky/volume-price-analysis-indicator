@@ -116,8 +116,8 @@ isDoji = showDojis and sufficientVolumeAndVolatility and body <= highLow * dojiB
 isNotDojiAndSufficient = not isDoji and sufficientVolumeAndVolatility
 isHammer = showHammers and isNotDojiAndSufficient and lowerWick >= body * hammerBodyToTotalRatio and bodyLow >= candleMidpoint and upperWick <= body * upperWickToBodyRatio
 isShooter = showShooters and isNotDojiAndSufficient and upperWick >= body * hammerBodyToTotalRatio and bodyHigh <= candleMidpoint and lowerWick <= body * upperWickToBodyRatio
-isBullishEngulfing = showEngulfing and isNotDojiAndSufficient and greenCandle and close >= open[1] and body >= prevCandleBody and prevRedCandle and ((body / 2) >= upperWick + lowerWick)// and ((prevCandleBody / 2) >= prevUpperWick + prevLowerWick)
-isBearishEngulfing = showEngulfing and isNotDojiAndSufficient and redCandle and close <= open[1] and body >= prevCandleBody and prevGreenCandle and ((body / 2) >= upperWick + lowerWick) //and ((prevCandleBody / 2) >= prevUpperWick + prevLowerWick)
+isBullishEngulfing = showEngulfing and isNotDojiAndSufficient and greenCandle and close >= open[1] and body >= prevCandleBody and prevRedCandle and ((body / 3) >= upperWick + lowerWick)
+isBearishEngulfing = showEngulfing and isNotDojiAndSufficient and redCandle and close <= open[1] and body >= prevCandleBody and prevGreenCandle and ((body / 3) >= upperWick + lowerWick)
 notCandlestickIndication = not isDoji and not isHammer and not isShooter and not isBearishEngulfing and not isBullishEngulfing
 
 // High volume anomalies
@@ -354,8 +354,8 @@ if barstate.islast
     prevMarketSession := getSession()
 
 // Plot hammers
-plotshape(isHammer and not bullishVolumeAnomaly and not isBullishEngulfing, style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="H")
-plotshape(isHammer and bullishVolumeAnomaly and not isBullishEngulfing, style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="HA")
+plotshape(isHammer and not bullishVolumeAnomaly, style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="H")
+plotshape(isHammer and bullishVolumeAnomaly, style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="HA")
 
 // Plot shooters
 plotshape(isShooter and not bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, color=color.rgb(255, 155, 93), textcolor=color.rgb(255, 255, 255), text="S")
