@@ -371,13 +371,13 @@ plotshape(isDoji and higherVolumeThanPrev, style=shape.triangledown, location=lo
 
 // Plot engulfing candles
 plotshape(isBullishEngulfing and not bullishVolumeAnomaly, style=shape.triangleup, location=location.belowbar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="E")
-plotshape(isBullishEngulfing and bullishVolumeAnomaly, style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="EA")
+plotshape(isBullishEngulfing and bullishVolumeAnomaly, style=shape.triangleup, location=location.belowbar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="EA")
 plotshape(isBearishEngulfing and not bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="E")
-plotshape(isBearishEngulfing and bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, color=color.rgb(255, 155, 93), textcolor=color.rgb(255, 255, 255), text="EA")
+plotshape(isBearishEngulfing and bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="EA")
 
 // Plot reversal bar
 plotshape(isBearishReversalBar and not isShooter, style=shape.triangledown, location=location.abovebar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="RB")
-plotshape(isBullishReversalBar and not isHammer, style=shape.triangledown, location=location.abovebar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="RB")
+plotshape(isBullishReversalBar and not isHammer, style=shape.triangleup, location=location.belowbar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="RB")
 
 // Plot volume anomalies
 plotshape(bullishHighVolumeAnomaly and notCandlestickIndication, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A")
