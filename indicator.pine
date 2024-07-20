@@ -6,11 +6,13 @@ indicator("Volume Price Analysis Indicator", shorttitle="VPA Indicator", overlay
 // User Inputs
 showHammers = input.bool(true, title="Show Hammers")
 showShooters = input.bool(true, title="Show Shooters")
-hammerBodyToTotalRatio = input(1.5, title="Hammer/Shooter Long Wick to Body Ratio", tooltip="Set the ratio of the long wick to the body for identifying hammers and shooters.")
-upperWickToBodyRatio = input(1.0, title="Hammer/Shooter Short Wick to Body Ratio", tooltip="Set the ratio of the short wick to the body for identifying hammers and shooters.")
+hammerBodyToTotalRatio = input(1.5, title="Hammer/Shooter Long Wick to Body Multiplier", tooltip="Set the multiplier for the maximum long wick to body for identifying hammers and shooters.")
+upperWickToBodyRatio = input(1.0, title="Hammer/Shooter Short Wick to Body Multiplier", tooltip="Set the multiplier for the maximum short wick to body for identifying hammers and shooters.")
+reversalBarShortWick = input(0.33, title="Engulfing/Reversal Bar Short Wick to Body Multiplier", tooltip="Set the multiplier for the maximum short wick to body for identifying engulfing and reversal bars.")
 showDojis = input.bool(true, title="Show Dojis")
-dojiBodyToTotalRatio = input(0.13, title="Doji Body to High/Low Ratio", tooltip="Set the maximum body-to-high/low ratio for identifying doji candlesticks.")
+dojiBodyToTotalRatio = input(0.10, title="Doji High/Low to Body Multiplier", tooltip="Set the maximum high/low to body multiplier for identifying doji candlesticks.")
 showEngulfing = input.bool(true, title="Show Engulfing")
+showReversalBar = input.bool(true, title="Show Reversal Bars")
 showHVAnomalies = input.bool(true, title="Show High Volume Anomalies")
 showLVAnomalies = input.bool(true, title="Show Low Volume Anomalies")
 acceptableVolumeThreshold = input(0.5, title="Acceptable Volume Threshold", tooltip="Set the minimum volume threshold as a multiple of the volume average (e.g., 0.25x volume average). Candlesticks with volume below this threshold will not display candlestick indications.")
@@ -104,7 +106,7 @@ greenCandle = close > open
 redCandle = close < open
 prevGreenCandle = close[1] > open[1]
 prevRedCandle = close[1] < open[1]
-candleMidpoint = (high - (high - low) / 2)
+candleMidpoint = high - (highLow / 2)
 
 // Pre-computed conditions to avoid redundancy
 sufficientVolumeAndVolatility = sufficientVolume and sufficientVolatility
@@ -116,8 +118,10 @@ isDoji = showDojis and sufficientVolumeAndVolatility and body <= highLow * dojiB
 isNotDojiAndSufficient = not isDoji and sufficientVolumeAndVolatility
 isHammer = showHammers and isNotDojiAndSufficient and lowerWick >= body * hammerBodyToTotalRatio and bodyLow >= candleMidpoint and upperWick <= body * upperWickToBodyRatio
 isShooter = showShooters and isNotDojiAndSufficient and upperWick >= body * hammerBodyToTotalRatio and bodyHigh <= candleMidpoint and lowerWick <= body * upperWickToBodyRatio
-isBullishEngulfing = showEngulfing and isNotDojiAndSufficient and greenCandle and close >= open[1] and body >= prevCandleBody and prevRedCandle and ((body / 3) >= upperWick + lowerWick)
-isBearishEngulfing = showEngulfing and isNotDojiAndSufficient and redCandle and close <= open[1] and body >= prevCandleBody and prevGreenCandle and ((body / 3) >= upperWick + lowerWick)
+isBullishEngulfing = showEngulfing and isNotDojiAndSufficient and greenCandle and close >= open[1] and body >= prevCandleBody and prevRedCandle and ((body * reversalBarShortWick) >= upperWick + lowerWick)
+isBearishEngulfing = showEngulfing and isNotDojiAndSufficient and redCandle and close <= open[1] and body >= prevCandleBody and prevGreenCandle and ((body * reversalBarShortWick) >= upperWick + lowerWick)
+isBearishReversalBar = showReversalBar and not isBearishEngulfing and isNotDojiAndSufficient and redCandle and close <= close[1] and body >= prevCandleBody and ((body * reversalBarShortWick) >= lowerWick) and (prevGreenCandle or (prevRedCandle and body >= prevCandleBody * 5))
+isBullishReversalBar = showReversalBar and not isBullishEngulfing and isNotDojiAndSufficient and greenCandle and close >= close[1] and body >= prevCandleBody and ((body * reversalBarShortWick) >= upperWick) and (prevRedCandle or (prevGreenCandle and body >= prevCandleBody * 5))
 notCandlestickIndication = not isDoji and not isHammer and not isShooter and not isBearishEngulfing and not isBullishEngulfing
 
 // High volume anomalies
@@ -370,6 +374,10 @@ plotshape(isBullishEngulfing and not bullishVolumeAnomaly, style=shape.triangleu
 plotshape(isBullishEngulfing and bullishVolumeAnomaly, style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="EA")
 plotshape(isBearishEngulfing and not bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="E")
 plotshape(isBearishEngulfing and bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, color=color.rgb(255, 155, 93), textcolor=color.rgb(255, 255, 255), text="EA")
+
+// Plot reversal bar
+plotshape(isBearishReversalBar and not isShooter, style=shape.triangledown, location=location.abovebar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="RB")
+plotshape(isBullishReversalBar and not isHammer, style=shape.triangledown, location=location.abovebar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="RB")
 
 // Plot volume anomalies
 plotshape(bullishHighVolumeAnomaly and notCandlestickIndication, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A")
