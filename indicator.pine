@@ -107,6 +107,7 @@ redCandle = close < open
 prevGreenCandle = close[1] > open[1]
 prevRedCandle = close[1] < open[1]
 candleMidpoint = high - (highLow / 2)
+prevCandleMidPoint = high[1] - (math.abs(high[1] - low[1]) / 2)
 
 // Pre-computed conditions to avoid redundancy
 sufficientVolumeAndVolatility = sufficientVolume and sufficientVolatility
@@ -120,8 +121,8 @@ isHammer = showHammers and isNotDojiAndSufficient and lowerWick >= body * hammer
 isShooter = showShooters and isNotDojiAndSufficient and upperWick >= body * hammerBodyToTotalRatio and bodyHigh <= candleMidpoint and lowerWick <= body * upperWickToBodyRatio
 isBullishEngulfing = showEngulfing and isNotDojiAndSufficient and greenCandle and close >= open[1] and body >= prevCandleBody and prevRedCandle and ((body * reversalBarShortWick) >= upperWick + lowerWick)
 isBearishEngulfing = showEngulfing and isNotDojiAndSufficient and redCandle and close <= open[1] and body >= prevCandleBody and prevGreenCandle and ((body * reversalBarShortWick) >= upperWick + lowerWick)
-isBearishReversalBar = showReversalBar and not isBearishEngulfing and isNotDojiAndSufficient and redCandle and close <= close[1] and body >= prevCandleBody and ((body * reversalBarShortWick) >= lowerWick) and (prevGreenCandle or (prevRedCandle and body >= prevCandleBody * 5))
-isBullishReversalBar = showReversalBar and not isBullishEngulfing and isNotDojiAndSufficient and greenCandle and close >= close[1] and body >= prevCandleBody and ((body * reversalBarShortWick) >= upperWick) and (prevRedCandle or (prevGreenCandle and body >= prevCandleBody * 5))
+isBearishReversalBar = showReversalBar and not isBearishEngulfing and isNotDojiAndSufficient and redCandle and ((close <= close[1] and body >= prevCandleBody) or (low <= prevCandleMidPoint)) and ((body * reversalBarShortWick) >= lowerWick) and (prevGreenCandle or (prevRedCandle and body >= prevCandleBody * 5))
+isBullishReversalBar = showReversalBar and not isBullishEngulfing and isNotDojiAndSufficient and greenCandle and ((close >= close[1] and body >= prevCandleBody) or (high >= prevCandleMidPoint)) and ((body * reversalBarShortWick) >= upperWick) and (prevRedCandle or (prevGreenCandle and body >= prevCandleBody * 5))
 notCandlestickIndication = not isDoji and not isHammer and not isShooter and not isBearishEngulfing and not isBullishEngulfing
 
 // High volume anomalies
