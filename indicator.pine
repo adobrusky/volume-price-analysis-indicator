@@ -6,8 +6,8 @@ indicator("Volume Price Analysis Indicator", shorttitle="VPA Indicator", overlay
 // User Inputs
 showHammers = input.bool(true, title="Show Hammers")
 showShooters = input.bool(true, title="Show Shooters")
-hammerBodyToTotalRatio = input(1.5, title="Hammer/Shooter Long Wick to Body Multiplier", tooltip="Set the multiplier for the maximum long wick to body for identifying hammers and shooters.")
-upperWickToBodyRatio = input(1.0, title="Hammer/Shooter Short Wick to Body Multiplier", tooltip="Set the multiplier for the maximum short wick to body for identifying hammers and shooters.")
+hammerBodyToTotalRatio = input(1.5, title="Hammer/Shooter Long Wick to Body Multiplier", tooltip="Set the multiplier for the minimum long wick to body for identifying hammers and shooters.")
+upperWickToBodyRatio = input(1, title="Hammer/Shooter Short Wick to Body Multiplier", tooltip="Set the multiplier for the maximum short wick to body for identifying hammers and shooters.")
 reversalBarShortWick = input(0.35, title="Engulfing/Reversal Bar Short Wick to Body Multiplier", tooltip="Set the multiplier for the maximum short wick to body for identifying engulfing and reversal bars.")
 showDojis = input.bool(true, title="Show Dojis")
 dojiBodyToTotalRatio = input(0.10, title="Doji High/Low to Body Multiplier", tooltip="Set the maximum high/low to body multiplier for identifying doji candlesticks.")
@@ -101,7 +101,6 @@ lowerWick = bodyLow - low
 prevCandleBody = math.abs(close[1] - open[1])
 atrValue = ta.atr(atrLength)
 sufficientVolatility = highLow >= atrValue * acceptableVolatilityThreshold
-bodyGreaterThanATRThreshold = body > atrValue * 1.5
 greenCandle = close >= open
 redCandle = close < open
 prevGreenCandle = close[1] >= open[1]
@@ -112,7 +111,6 @@ prevCandleMidPoint = high[1] - (math.abs(high[1] - low[1]) / 2)
 // Pre-computed conditions to avoid redundancy
 sufficientVolumeAndVolatility = sufficientVolume and sufficientVolatility
 isVolumeNAorHigher = na(volume) or higherVolumeThanPrev
-isLowerVolumeThanPrevAndVolatility = lowerVolumeThanPrev and sufficientVolumeAndVolatility
 isNotBullishContinuation = close[1] - open[2] <= body / 2
 isNotBearishContinuation = open[2] - close[1] <= body / 2
 
@@ -129,13 +127,13 @@ notCandlestickIndication = not isDoji and not isHammer and not isShooter and not
 
 // High volume anomalies
 isHighVolumeAnomalyCondition = showHVAnomalies and higherVolumeThanPrev and sufficientVolumeAndVolatility
-bullishHighVolumeAnomaly = isHighVolumeAnomalyCondition and redCandle and close[1] < open[1] and body < prevCandleBody
-bearishHighVolumeAnomaly = isHighVolumeAnomalyCondition and greenCandle and close[1] > open[1] and body < prevCandleBody
+bullishHighVolumeAnomaly = isHighVolumeAnomalyCondition and redCandle and prevRedCandle and body < prevCandleBody
+bearishHighVolumeAnomaly = isHighVolumeAnomalyCondition and greenCandle and prevGreenCandle and body < prevCandleBody
 
 // Low volume anomalies
-isLowVolumeAnomalyCondition = showLVAnomalies and volumeLessThanMetric and isLowerVolumeThanPrevAndVolatility and bodyGreaterThanATRThreshold
-bullishLowVolumeAnomaly = isLowVolumeAnomalyCondition and redCandle
-bearishLowVolumeAnomaly = isLowVolumeAnomalyCondition and greenCandle
+isLowVolumeAnomalyCondition = showLVAnomalies and volumeLessThanMetric and lowerVolumeThanPrev and sufficientVolumeAndVolatility
+bullishLowVolumeAnomaly = isLowVolumeAnomalyCondition and redCandle and prevRedCandle and body > prevCandleBody 
+bearishLowVolumeAnomaly = isLowVolumeAnomalyCondition and greenCandle and prevGreenCandle and body > prevCandleBody 
 
 // Volume Anomalies
 bullishVolumeAnomaly = bullishHighVolumeAnomaly or bullishLowVolumeAnomaly
