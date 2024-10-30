@@ -15,7 +15,6 @@ showEngulfing = input.bool(true, title="Show Engulfing")
 showReversalBar = input.bool(true, title="Show Reversal Bars")
 showHVAnomalies = input.bool(true, title="Show High Volume Anomalies")
 showLVAnomalies = input.bool(true, title="Show Low Volume Anomalies")
-showBarbWire = input.bool(true, title="Show Barb Wire")
 acceptableVolumeThreshold = input(0.33, title="Acceptable Volume Threshold", tooltip="Set the minimum volume threshold as a multiple of the volume average (e.g., 0.33x volume average). Candlesticks with volume below this threshold will not display candlestick indications.")
 volumeMetricLength = input.int(50, minval=10, maxval=500, title="Volume SMA Length", tooltip="Set the length for the volume SMA calculation.")
 acceptableVolatilityThreshold = input(0.5, title="Acceptable Volatility Threshold", tooltip="Set the minimum volatility threshold as a multiple of the ATR (e.g., 0.5x ATR). Candlesticks with volatility below this threshold will not display candlestick indications.")
@@ -99,6 +98,7 @@ bodyLow = math.min(open, close)
 highLow = math.abs(high - low)
 upperWick = high - bodyHigh
 lowerWick = bodyLow - low
+prevCandleBody = math.abs(close[1] - open[1])
 atrValue = ta.atr(atrLength)
 sufficientVolatility = highLow >= atrValue * acceptableVolatilityThreshold
 greenCandle = close >= open
@@ -113,29 +113,8 @@ isVolumeNAorHigher = na(volume) or higherVolumeThanPrev
 isNotBullishContinuation = close[1] - open[2] <= body / 2
 isNotBearishContinuation = open[2] - close[1] <= body / 2
 
-// Variables to store previous and previous-previous bar information for calculating barb wire
-var float prevCandleBody = na
-var float prevCandleBodyHigh = na
-var float prevCandleBodyLow = na
-var bool prevBarIsDoji = false
-var bool prevOverlapBody = false
-var bool overlapBody = false
-var bool overlapPrevBody = false
-var float prevPrevCandleBody = na
-var float prevPrevCandleBodyHigh = na
-var float prevPrevCandleBodyLow = na
-var bool prevPrevBarIsDoji = false
-
-// Calculate whether the current bar is a doji
-isDoji = sufficientVolumeAndVolatility and body <= highLow * dojiBodyToTotalRatio
-
-if showBarbWire
-    overlapBody := (math.min(bodyHigh, prevCandleBodyHigh) - math.max(bodyLow, prevCandleBodyLow)) > 0.67 * math.max(body, prevCandleBody)
-    overlapPrevBody := (math.min(bodyHigh, prevPrevCandleBodyHigh) - math.max(bodyLow, prevPrevCandleBodyLow)) > 0.67 * math.max(body, prevPrevCandleBody)
-
-// Barb wire condition: any of the last 3 bars is a doji and significant body overlap
-barbWire = showBarbWire and ((isDoji and prevOverlapBody) or (prevBarIsDoji and overlapPrevBody) or (prevPrevBarIsDoji and overlapBody) or (isDoji and prevBarIsDoji) or (isDoji and prevPrevBarIsDoji))
-
+// Determine candle types
+isDoji = showDojis and sufficientVolumeAndVolatility and body <= highLow * dojiBodyToTotalRatio
 isNotDojiAndSufficient = not isDoji and sufficientVolumeAndVolatility
 isHammer = showHammers and isNotDojiAndSufficient and lowerWick >= body * hammerBodyToTotalRatio and upperWick <= highLow * shortWickToTotalRatio
 isShooter = showShooters and isNotDojiAndSufficient and upperWick >= body * hammerBodyToTotalRatio and lowerWick <= highLow * shortWickToTotalRatio
@@ -143,7 +122,7 @@ isBullishEngulfing = showEngulfing and isNotDojiAndSufficient and greenCandle an
 isBearishEngulfing = showEngulfing and isNotDojiAndSufficient and redCandle and close <= open[1] and body >= prevCandleBody and prevGreenCandle and ((body * reversalBarShortWick) >= upperWick + lowerWick) and isNotBearishContinuation
 isBullishReversalBar = showReversalBar and not isBullishEngulfing and isNotDojiAndSufficient and greenCandle and high >= prevCandleMidPoint and ((body * reversalBarShortWick) >= upperWick) and (prevRedCandle or (prevGreenCandle and body >= prevCandleBody * 10)) and isNotBullishContinuation
 isBearishReversalBar = showReversalBar and not isBearishEngulfing and isNotDojiAndSufficient and redCandle and low <= prevCandleMidPoint and ((body * reversalBarShortWick) >= lowerWick) and (prevGreenCandle or (prevRedCandle and body >= prevCandleBody * 10)) and isNotBearishContinuation
-notCandlestickIndication = not isDoji and not isHammer and not isShooter and not isBearishEngulfing and not isBullishEngulfing and not barbWire
+notCandlestickIndication = not isDoji and not isHammer and not isShooter and not isBearishEngulfing and not isBullishEngulfing
 
 // High volume anomalies
 isHighVolumeAnomalyCondition = showHVAnomalies and higherVolumeThanPrev and sufficientVolumeAndVolatility
@@ -158,19 +137,6 @@ bearishLowVolumeAnomaly = isLowVolumeAnomalyCondition and greenCandle and prevGr
 // Volume Anomalies
 bullishVolumeAnomaly = bullishHighVolumeAnomaly or bullishLowVolumeAnomaly
 bearishVolumeAnomaly = bearishHighVolumeAnomaly or bearishLowVolumeAnomaly
-
-// Store the current bar's information as "previous" for use in the next bar
-prevPrevCandleBody := prevCandleBody
-prevPrevCandleBodyHigh := prevCandleBodyHigh
-prevPrevCandleBodyLow := prevCandleBodyLow
-prevPrevBarIsDoji := prevBarIsDoji
-
-// Store current bar information
-prevCandleBody := body
-prevCandleBodyHigh := bodyHigh
-prevCandleBodyLow := bodyLow
-prevBarIsDoji := isDoji
-prevOverlapBody := overlapBody
 
 getGaps(lookBack) =>
     map<int, string> gapsDict = map.new<int, string>()
@@ -419,6 +385,3 @@ plotshape(bearishHighVolumeAnomaly and notCandlestickIndication, location=locati
 
 plotshape(bullishLowVolumeAnomaly and notCandlestickIndication, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A")
 plotshape(bearishLowVolumeAnomaly and notCandlestickIndication, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A")
-
-// Plot barb wire
-plotshape(barbWire and not isBullishEngulfing and not isBullishReversalBar and not isBearishEngulfing and not isBearishReversalBar, style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 48), textcolor=color.rgb(255, 255, 255), text="B")
