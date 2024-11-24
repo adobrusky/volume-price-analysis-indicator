@@ -1,6 +1,6 @@
 // This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
 
-//@version=5
+//@version=6
 indicator("Volume Price Analysis Indicator", shorttitle="VPA Indicator", overlay=true, max_bars_back=500, max_lines_count=500, max_labels_count=500)
 
 // User Inputs
@@ -87,8 +87,7 @@ higherVolumeThanPrev = volume > volume[1]
 lowerVolumeThanPrev = volume < volume[1]
 sufficientVolume = volume > volumeSMA * acceptableVolumeThreshold
 volumeLessThanMetric = volume < volumeSMA
-
-if na(sufficientVolume)
+if na(volume)
     sufficientVolume := true
 
 // Price action calculations
@@ -99,29 +98,43 @@ highLow = math.abs(high - low)
 upperWick = high - bodyHigh
 lowerWick = bodyLow - low
 prevCandleBody = math.abs(close[1] - open[1])
-atrValue = ta.atr(atrLength)
-sufficientVolatility = highLow >= atrValue * acceptableVolatilityThreshold
 greenCandle = close >= open
 redCandle = close < open
 prevGreenCandle = close[1] >= open[1]
 prevRedCandle = close[1] < open[1]
 prevCandleMidPoint = high[1] - (math.abs(high[1] - low[1]) / 2)
 
+// ATR calculation using RTH only
+var trArray = array.new_float(0)
+isRTH = time(timeframe.period, "0930-1600", "America/New_York") != 0
+atrValue = 0.0
+tr = ta.tr(true)
+if isRTH
+    array.push(trArray, tr)
+    if array.size(trArray) > atrLength
+        array.shift(trArray)
+    atrValue := array.sum(trArray) / array.size(trArray)
+else
+    atrValue := nz(atrValue[1])
+
+exceedsATR = tr > 1.5 * atrValue
+sufficientVolatility = highLow >= atrValue * acceptableVolatilityThreshold
+
 // Pre-computed conditions to avoid redundancy
 sufficientVolumeAndVolatility = sufficientVolume and sufficientVolatility
 isVolumeNAorHigher = na(volume) or higherVolumeThanPrev
-isNotBullishContinuation = close[1] - open[2] <= body / 2
-isNotBearishContinuation = open[2] - close[1] <= body / 2
+// isNotBullishContinuation = close[1] - open[2] <= body / 2
+// isNotBearishContinuation = open[2] - close[1] <= body / 2
 
 // Determine candle types
 isDoji = showDojis and sufficientVolumeAndVolatility and body <= highLow * dojiBodyToTotalRatio
 isNotDojiAndSufficient = not isDoji and sufficientVolumeAndVolatility
 isHammer = showHammers and isNotDojiAndSufficient and lowerWick >= body * hammerBodyToTotalRatio and upperWick <= highLow * shortWickToTotalRatio
 isShooter = showShooters and isNotDojiAndSufficient and upperWick >= body * hammerBodyToTotalRatio and lowerWick <= highLow * shortWickToTotalRatio
-isBullishEngulfing = showEngulfing and isNotDojiAndSufficient and greenCandle and close >= open[1] and body >= prevCandleBody and prevRedCandle and ((body * reversalBarShortWick) >= upperWick + lowerWick) and isNotBullishContinuation
-isBearishEngulfing = showEngulfing and isNotDojiAndSufficient and redCandle and close <= open[1] and body >= prevCandleBody and prevGreenCandle and ((body * reversalBarShortWick) >= upperWick + lowerWick) and isNotBearishContinuation
-isBullishReversalBar = showReversalBar and not isBullishEngulfing and isNotDojiAndSufficient and greenCandle and high >= prevCandleMidPoint and ((body * reversalBarShortWick) >= upperWick) and (prevRedCandle or (prevGreenCandle and body >= prevCandleBody * 10)) and isNotBullishContinuation
-isBearishReversalBar = showReversalBar and not isBearishEngulfing and isNotDojiAndSufficient and redCandle and low <= prevCandleMidPoint and ((body * reversalBarShortWick) >= lowerWick) and (prevGreenCandle or (prevRedCandle and body >= prevCandleBody * 10)) and isNotBearishContinuation
+isBullishEngulfing = showEngulfing and isNotDojiAndSufficient and greenCandle and close >= open[1] and body >= prevCandleBody and prevRedCandle and ((body * reversalBarShortWick) >= upperWick + lowerWick) //and isNotBullishContinuation
+isBearishEngulfing = showEngulfing and isNotDojiAndSufficient and redCandle and close <= open[1] and body >= prevCandleBody and prevGreenCandle and ((body * reversalBarShortWick) >= upperWick + lowerWick) //and isNotBearishContinuation
+isBullishReversalBar = showReversalBar and not isBullishEngulfing and isNotDojiAndSufficient and greenCandle and high >= prevCandleMidPoint and ((body * reversalBarShortWick) >= upperWick) and (prevRedCandle or (prevGreenCandle and body >= prevCandleBody * 5)) //and isNotBullishContinuation
+isBearishReversalBar = showReversalBar and not isBearishEngulfing and isNotDojiAndSufficient and redCandle and low <= prevCandleMidPoint and ((body * reversalBarShortWick) >= lowerWick) and (prevGreenCandle or (prevRedCandle and body >= prevCandleBody * 5)) //and isNotBearishContinuation
 notCandlestickIndication = not isDoji and not isHammer and not isShooter and not isBearishEngulfing and not isBullishEngulfing
 
 // High volume anomalies
@@ -385,3 +398,5 @@ plotshape(bearishHighVolumeAnomaly and notCandlestickIndication, location=locati
 
 plotshape(bullishLowVolumeAnomaly and notCandlestickIndication, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A")
 plotshape(bearishLowVolumeAnomaly and notCandlestickIndication, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A")
+
+barcolor(exceedsATR ? color.new(color.white, 100) : na, title="Climax")
