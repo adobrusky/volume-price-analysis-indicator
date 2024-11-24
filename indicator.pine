@@ -106,7 +106,7 @@ prevCandleMidPoint = high[1] - (math.abs(high[1] - low[1]) / 2)
 
 // ATR calculation using RTH only
 var trArray = array.new_float(0)
-isRTH = time(timeframe.period, "0930-1600", "America/New_York") != 0
+isRTH = time(timeframe.period, "0930-1600:23456", "America/New_York") != 0 or timeframe.isdwm
 atrValue = 0.0
 tr = ta.tr(true)
 if isRTH
