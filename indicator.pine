@@ -13,6 +13,7 @@ showDojis = input.bool(true, title="Show Dojis")
 dojiBodyToTotalRatio = input(0.10, title="Doji Body to Total Multiplier", tooltip="Set the maximum body to total candle range ratio for identifying doji candlesticks.")
 showEngulfing = input.bool(true, title="Show Engulfing")
 showReversalBar = input.bool(true, title="Show Reversal Bars")
+showClimacticBar = input.bool(true, title="Show Climactic Bars")
 showHVAnomalies = input.bool(true, title="Show High Volume Anomalies")
 showLVAnomalies = input.bool(true, title="Show Low Volume Anomalies")
 acceptableVolumeThreshold = input(0.33, title="Acceptable Volume Threshold", tooltip="Set the minimum volume threshold as a multiple of the volume average (e.g., 0.33x volume average). Candlesticks with volume below this threshold will not display candlestick indications.")
@@ -117,7 +118,7 @@ if isRTH
 else
     atrValue := nz(atrValue[1])
 
-exceedsATR = tr > 1.5 * atrValue
+exceedsATR = showClimacticBar and body > (highLow / 2) and tr > 1.5 * atrValue
 sufficientVolatility = highLow >= atrValue * acceptableVolatilityThreshold
 
 // Pre-computed conditions to avoid redundancy
@@ -399,4 +400,4 @@ plotshape(bearishHighVolumeAnomaly and notCandlestickIndication, location=locati
 plotshape(bullishLowVolumeAnomaly and notCandlestickIndication, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A")
 plotshape(bearishLowVolumeAnomaly and notCandlestickIndication, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A")
 
-barcolor(exceedsATR ? color.new(color.white, 100) : na, title="Climax")
+barcolor(exceedsATR ? greenCandle ? color.new(color.green, 100) : color.new(color.red, 100) : na, title="Climax")
