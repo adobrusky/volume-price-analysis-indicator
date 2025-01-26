@@ -19,6 +19,7 @@ volumeMetricLength = input.int(50, minval=10, maxval=500, title="Volume SMA Leng
 acceptableVolatilityThreshold = input(0.5, title="Acceptable Volatility Threshold", tooltip="Set the minimum volatility threshold as a multiple of the ATR (e.g., 0.5x ATR). Candlesticks with volatility below this threshold will not display candlestick indications.")
 atrLength = input(14, title="ATR Length", tooltip="Set the length of the ATR calculation.")
 showDailyGaps = input.bool(true, title="Show Daily Gaps")
+usePartialFill = input.bool(false, title = "Use Partial Gap Filling", tooltip = "Enable to shrink gap boundaries as price fills them. Disable to keep gaps at their original boundaries until fully filled.")
 gapLookback = input.int(200, minval=10, maxval=500, title="Gap Lookback", tooltip="Set the lookback period for identifying daily gaps.")
 dailyGapColor = input(color.rgb(255, 255, 255, 95), title="Daily Gap Color")
 dailyGapBorderColor = input(color.rgb(255, 255, 255, 30), title="Daily Gap Border Color")
@@ -162,26 +163,30 @@ getGaps(lookBack) =>
 
         // Check for gap
         if dailyOpen != prevClose
-            gapsDict.put(time[i], str.tostring(math.max(dailyOpen, prevClose)) + "," + str.tostring(math.min(dailyOpen, prevClose)))
+            // Store time based key with string value "originalGapHigh,originalGapLow:partialGapHigh,partialGapLow"
+            gapHigh = str.tostring(math.max(dailyOpen, prevClose))
+            gapLow = str.tostring(math.min(dailyOpen, prevClose))
+            gapsDict.put(time[i], gapHigh + "," + gapLow + ":" + gapHigh + "," + gapLow)
 
         // Check if gaps are filled or partially filled
         keysToRemove = array.new_int(0)
         if not barstate.isrealtime[i]
             for [key, value] in gapsDict
-                gapHighAndLow = str.split(value, ",")
-                gapHigh = str.tonumber(array.get(gapHighAndLow, 0))
-                gapLow = str.tonumber(array.get(gapHighAndLow, 1))
+                gapOriginalAndPartial = str.split(value, ":")
+                partialGapHighAndLow = str.split(array.get(gapOriginalAndPartial, 1), ",")
+                partialGapHigh = str.tonumber(array.get(partialGapHighAndLow, 0))
+                partialGapLow = str.tonumber(array.get(partialGapHighAndLow, 1))
                 // Check if gap is completely filled
-                if dailyLow <= gapLow and dailyHigh >= gapHigh
+                if dailyLow <= partialGapLow and dailyHigh >= partialGapHigh
                     array.push(keysToRemove, key)
                 else
                     // Check for partial fill and update gap
-                    if dailyLow > gapLow and dailyLow < gapHigh
-                        gapHigh := dailyLow
-                        gapsDict.put(key, str.tostring(gapHigh) + "," + str.tostring(gapLow))
-                    if dailyHigh < gapHigh and dailyHigh > gapLow
-                        gapLow := dailyHigh
-                        gapsDict.put(key, str.tostring(gapHigh) + "," + str.tostring(gapLow))
+                    if dailyLow > partialGapLow and dailyLow < partialGapHigh
+                        partialGapHigh := dailyLow
+                        gapsDict.put(key, array.get(gapOriginalAndPartial, 0) + ":" + str.tostring(partialGapHigh) + "," + str.tostring(partialGapLow))
+                    if dailyHigh < partialGapHigh and dailyHigh > partialGapLow
+                        partialGapLow := dailyHigh
+                        gapsDict.put(key, array.get(gapOriginalAndPartial, 0) + ":" + str.tostring(partialGapHigh) + "," + str.tostring(partialGapLow))
 
         // Remove completely filled gaps
         for key in keysToRemove
@@ -194,8 +199,9 @@ getGaps(lookBack) =>
     atr = atrSum / atrLength
 
     for [key, value] in gapsDict
-        gapHighAndLow = str.split(value, ",")
-        gapSize = math.abs(str.tonumber(array.get(gapHighAndLow, 0)) - str.tonumber(array.get(gapHighAndLow, 1)))
+        gapOriginalAndPartial = str.split(value, ":")
+        partialGapHighAndLow = str.split(array.get(gapOriginalAndPartial, 1), ",")
+        gapSize = math.abs(str.tonumber(array.get(partialGapHighAndLow, 0)) - str.tonumber(array.get(partialGapHighAndLow, 1)))
         if gapSize < atr * 0.1
             array.push(keysToRemove, key)
 
@@ -213,6 +219,7 @@ getSession() =>
         "A"
 
 getHighLowOpenClose() =>
+    // TODO: To make automatic levels adjust during premarket, need to return previous or current values here accordingly. Would need to return current weekly values in premarket before a new week and same for month/day
     [high[1], low[1], open, close[1]]
 
 getHigherTimeframeData(timeframe) =>
@@ -352,7 +359,8 @@ if barIsLastAndNotExecutedDailyLogic
             clearBoxes()
             gapEnd = time + timeframe.in_seconds()
             for [key, value] in dailyGaps
-                gapHighAndLow = str.split(value, ",")
+                gapOriginalAndPartial = str.split(value, ":")
+                gapHighAndLow = str.split(array.get(gapOriginalAndPartial, usePartialFill ? 1 : 0), ",")
                 gapHigh = str.tonumber(array.get(gapHighAndLow, 0))
                 gapLow = str.tonumber(array.get(gapHighAndLow, 1))
                 array.push(lineIds, line.new(key, gapHigh, gapEnd, gapHigh, width=dailyGapBorderWidth, color=dailyGapBorderColor, extend=extend.right, xloc=xloc.bar_time))
