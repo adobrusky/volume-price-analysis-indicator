@@ -24,9 +24,9 @@ gapLookback = input.int(200, minval=10, maxval=500, title="Gap Lookback", toolti
 dailyGapColor = input(color.rgb(255, 255, 255, 95), title="Daily Gap Color")
 dailyGapBorderColor = input(color.rgb(255, 255, 255, 30), title="Daily Gap Border Color")
 dailyGapBorderWidth = input(2, title="Daily Gap Border Width", tooltip="Set the width of the border around daily gaps.")
-plotPrevMonthHighLow = input.bool(true, title="Plot Previous Month High/Low")
-plotPrevWeekHighLow = input.bool(true, title="Plot Previous Week High/Low")
-plotPrevDayHighLow = input.bool(true, title="Plot Previous Day High/Low")
+plotPrevMonthHighLow = input.bool(true, title="Plot Previous Month High/Low/Close")
+plotPrevWeekHighLow = input.bool(true, title="Plot Previous Week High/Low/Close")
+plotPrevDayHighLow = input.bool(true, title="Plot Previous Day High/Low/Close")
 plotMonthlyOpeningPrint = input.bool(true, title="Plot Monthly Opening Print")
 plotWeeklyOpeningPrint = input.bool(true, title="Plot Weekly Opening Print")
 plotDailyOpeningPrint = input.bool(true, title="Plot Daily Opening Print")
@@ -40,8 +40,9 @@ hideMonthlyAutomaticLevelsHigherThan = input.timeframe("D", title="Hide Monthly 
 hideAllAutomaticLevelsHigherThan = input.timeframe("W", title="Hide All Automatic Price Levels Above", tooltip="Specify the timeframe above which all automatic price levels should be hidden.")
 highPriceLevelColor  = input(color.rgb(8, 153, 129), title="High Price Level Color")
 lowPriceLevelColor  = input(color.rgb(242, 54, 69), title="Low Price Level Color")
+closePriceLevelColor  = input(color.rgb(243, 255, 138), title="Close Price Level Color")
 openingPrintColor = input(color.rgb(243, 152, 15), title="Opening Print Color")
-pivotLevelColor = input(color.rgb(240, 98, 146), title="Pivot Level Color")
+pivotLevelColor = input(color.rgb(182, 105, 197), title="Pivot Level Color")
 
 var bool hideDailyAutomaticLevels = (timeframe.in_seconds(hideDailyAutomaticLevelsHigherThan) / 60) < (timeframe.in_seconds() / 60)
 var bool hideWeeklyAutomaticLevels = (timeframe.in_seconds(hideWeeklyAutomaticLevelsHigherThan) / 60) < (timeframe.in_seconds() / 60)
@@ -277,6 +278,7 @@ if barIsLastAndNotExecutedDailyLogic
     if plotPrevDayHighLow
         array.push(lineIds, line.new(bar_index, prevDayHigh, bar_index + 1, prevDayHigh, xloc.bar_index, extend.both, color = highPriceLevelColor, style = line.style_dotted, width = 2))
         array.push(lineIds, line.new(bar_index, prevDayLow, bar_index + 1, prevDayLow, xloc.bar_index, extend.both, color = lowPriceLevelColor, style = line.style_dotted, width = 2))
+        array.push(lineIds, line.new(bar_index, prevDayClose, bar_index + 1, prevDayClose, xloc.bar_index, extend.both, color = closePriceLevelColor, style = line.style_dotted, width = 2))
     if plotDailyOpeningPrint
         array.push(lineIds, line.new(bar_index, currentDayOpen, bar_index + 1, currentDayOpen, xloc.bar_index, extend.both, color = openingPrintColor, style = line.style_dotted, width = 2))
     
@@ -303,6 +305,7 @@ if barIsLastAndNotExecutedDailyLogic
     if plotPrevWeekHighLow
         array.push(lineIds, line.new(bar_index, prevWeekHigh, bar_index + 1, prevWeekHigh, xloc.bar_index, extend.both, color = highPriceLevelColor, style = line.style_dotted, width = 3))
         array.push(lineIds, line.new(bar_index, prevWeekLow, bar_index + 1, prevWeekLow, xloc.bar_index, extend.both, color = lowPriceLevelColor, style = line.style_dotted, width = 3))
+        array.push(lineIds, line.new(bar_index, prevWeekClose, bar_index + 1, prevWeekClose, xloc.bar_index, extend.both, color = closePriceLevelColor, style = line.style_dotted, width = 3))
     if plotWeeklyOpeningPrint
         array.push(lineIds, line.new(bar_index, currentWeekOpen, bar_index + 1, currentWeekOpen, xloc.bar_index, extend.both, color = openingPrintColor, style = line.style_dotted, width = 3))
 
@@ -329,6 +332,7 @@ if barIsLastAndNotExecutedDailyLogic
     if plotPrevMonthHighLow
         array.push(lineIds, line.new(bar_index, prevMonthHigh, bar_index + 1, prevMonthHigh, xloc.bar_index, extend.both, color = highPriceLevelColor, style = line.style_dotted, width = 5))
         array.push(lineIds, line.new(bar_index, prevMonthLow, bar_index + 1, prevMonthLow, xloc.bar_index, extend.both, color = lowPriceLevelColor, style = line.style_dotted, width = 5))
+        array.push(lineIds, line.new(bar_index, prevMonthClose, bar_index + 1, prevMonthClose, xloc.bar_index, extend.both, color = closePriceLevelColor, style = line.style_dotted, width = 5))
     if plotMonthlyOpeningPrint
         array.push(lineIds, line.new(bar_index, currentMonthOpen, bar_index + 1, currentMonthOpen, xloc.bar_index, extend.both, color = openingPrintColor, style = line.style_dotted, width = 5))
     
