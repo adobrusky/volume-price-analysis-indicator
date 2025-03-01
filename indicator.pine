@@ -11,6 +11,7 @@ shortWickToTotalRatio = input(0.15, title="Hammer/Shooter Short Wick to Total Mu
 reversalBarShortWick = input(0.35, title="Reversal Bar Short Wick to Body Multiplier", tooltip="Set the multiplier for the maximum short wick to body ratio for identifying reversal bars.")
 showDojis = input.bool(true, title="Show Dojis")
 dojiBodyToTotalRatio = input(0.10, title="Doji Body to Total Multiplier", tooltip="Set the maximum body to total candle range ratio for identifying doji candlesticks.")
+showInsideBars = input.bool(true, title="Show Inside Bars")
 showReversalBar = input.bool(true, title="Show Reversal Bars")
 showHVAnomalies = input.bool(true, title="Show High Volume Anomalies")
 showLVAnomalies = input.bool(true, title="Show Low Volume Anomalies")
@@ -126,12 +127,13 @@ isVolumeNAorHigher = na(volume) or higherVolumeThanPrev
 
 // Determine candle types
 isDoji = showDojis and sufficientVolumeAndVolatility and body <= highLow * dojiBodyToTotalRatio
+isInsideBar = showInsideBars and sufficientVolumeAndVolatility and (high <= high[1] and low >= low[1])
 isNotDojiAndSufficient = not isDoji and sufficientVolumeAndVolatility
 isHammer = showHammers and isNotDojiAndSufficient and lowerWick >= body * hammerBodyToTotalRatio and upperWick <= highLow * shortWickToTotalRatio
 isShooter = showShooters and isNotDojiAndSufficient and upperWick >= body * hammerBodyToTotalRatio and lowerWick <= highLow * shortWickToTotalRatio
 isBullishReversalBar = showReversalBar and isNotDojiAndSufficient and greenCandle and high >= prevCandleMidPoint and ((body * reversalBarShortWick) >= upperWick) and (prevRedCandle or (prevGreenCandle and body >= prevCandleBody * 5))
 isBearishReversalBar = showReversalBar and isNotDojiAndSufficient and redCandle and low <= prevCandleMidPoint and ((body * reversalBarShortWick) >= lowerWick) and (prevGreenCandle or (prevRedCandle and body >= prevCandleBody * 5))
-notCandlestickIndication = not isDoji and not isHammer and not isShooter
+notCandlestickIndication = not isDoji and not isHammer and not isShooter and not isInsideBar
 
 // High volume anomalies
 isHighVolumeAnomalyCondition = showHVAnomalies and higherVolumeThanPrev and sufficientVolumeAndVolatility
@@ -376,20 +378,28 @@ if barstate.islast
     prevMarketSession := getSession()
 
 // Plot hammers
-plotshape(isHammer and not bullishVolumeAnomaly, style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="H")
-plotshape(isHammer and bullishVolumeAnomaly, style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="HA")
+plotshape(isHammer and not bullishVolumeAnomaly and not isInsideBar, style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="H")
+plotshape(isHammer and not bullishVolumeAnomaly and isInsideBar, style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="HI")
+plotshape(isHammer and bullishVolumeAnomaly and not isInsideBar, style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="HA")
 
 // Plot shooters
-plotshape(isShooter and not bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, color=color.rgb(255, 155, 93), textcolor=color.rgb(255, 255, 255), text="S")
-plotshape(isShooter and bearishVolumeAnomaly, style=shape.triangledown, location=location.abovebar, color=color.rgb(255, 155, 93), textcolor=color.rgb(255, 255, 255), text="SA")
+plotshape(isShooter and not bearishVolumeAnomaly and not isInsideBar, style=shape.triangledown, location=location.abovebar, color=color.rgb(255, 155, 93), textcolor=color.rgb(255, 255, 255), text="S")
+plotshape(isShooter and not bearishVolumeAnomaly and isInsideBar, style=shape.triangledown, location=location.abovebar, color=color.rgb(255, 155, 93), textcolor=color.rgb(255, 255, 255), text="SI")
+plotshape(isShooter and bearishVolumeAnomaly and not isInsideBar, style=shape.triangledown, location=location.abovebar, color=color.rgb(255, 155, 93), textcolor=color.rgb(255, 255, 255), text="SA")
 
 // Plots dojis
-plotshape(isDoji and not higherVolumeThanPrev, style=shape.triangledown, location=location.abovebar, color=color.rgb(201, 55, 55), textcolor=color.rgb(255, 255, 255), text="D")
-plotshape(isDoji and higherVolumeThanPrev, style=shape.triangledown, location=location.abovebar, color=color.rgb(201, 55, 55), textcolor=color.rgb(255, 255, 255), text="DA")
+plotshape(isDoji and not higherVolumeThanPrev and not isInsideBar, style=shape.triangledown, location=location.abovebar, color=color.rgb(201, 55, 55), textcolor=color.rgb(255, 255, 255), text="D")
+plotshape(isDoji and isInsideBar, style=shape.triangledown, location=location.abovebar, color=color.rgb(201, 55, 55), textcolor=color.rgb(255, 255, 255), text="DI")
+plotshape(isDoji and higherVolumeThanPrev and not isInsideBar, style=shape.triangledown, location=location.abovebar, color=color.rgb(201, 55, 55), textcolor=color.rgb(255, 255, 255), text="DA")
+
+// Plots inside bars
+plotshape(isInsideBar and not isDoji and not isShooter and not isHammer and not isBearishReversalBar and not isBullishReversalBar, style=shape.triangledown, location=location.abovebar, color=color.rgb(201, 55, 55), textcolor=color.rgb(255, 255, 255), text="I")
 
 // Plot reversal bar
-plotshape(isBearishReversalBar and not isShooter, style=shape.triangledown, location=location.abovebar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="R")
-plotshape(isBullishReversalBar and not isHammer, style=shape.triangleup, location=location.belowbar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="R")
+plotshape(isBearishReversalBar and not isShooter and not isInsideBar, style=shape.triangledown, location=location.abovebar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="R")
+plotshape(isBearishReversalBar and not isShooter and isInsideBar, style=shape.triangledown, location=location.abovebar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="RI")
+plotshape(isBullishReversalBar and not isHammer and not isInsideBar, style=shape.triangleup, location=location.belowbar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="R")
+plotshape(isBullishReversalBar and not isHammer and isInsideBar, style=shape.triangleup, location=location.belowbar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="RI")
 
 // Plot volume anomalies
 plotshape(bullishHighVolumeAnomaly and notCandlestickIndication, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A")
