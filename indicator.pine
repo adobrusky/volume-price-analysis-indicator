@@ -1,7 +1,7 @@
 // This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
 
 //@version=6
-indicator("Volume Price Analysis Indicator", shorttitle="VPA Indicator", overlay=true, max_bars_back=500, max_lines_count=500, max_labels_count=500)
+indicator("Volume Price Analysis Indicator", shorttitle="VPA", overlay=true, calc_bars_count=1000)
 
 // User Inputs
 showHammers = input.bool(true, title="Show Hammers")
@@ -25,9 +25,9 @@ gapLookback = input.int(200, minval=10, maxval=500, title="Gap Lookback", toolti
 dailyGapColor = input(color.rgb(255, 255, 255, 95), title="Daily Gap Color")
 dailyGapBorderColor = input(color.rgb(255, 255, 255, 30), title="Daily Gap Border Color")
 dailyGapBorderWidth = input(2, title="Daily Gap Border Width", tooltip="Set the width of the border around daily gaps.")
-plotPrevMonthHighLow = input.bool(true, title="Plot Previous Month High/Low/Close")
-plotPrevWeekHighLow = input.bool(true, title="Plot Previous Week High/Low/Close")
-plotPrevDayHighLow = input.bool(true, title="Plot Previous Day High/Low/Close")
+plotPrevMonthHighLowClose = input.bool(true, title="Plot Previous Month High/Low/Close")
+plotPrevWeekHighLowClose = input.bool(true, title="Plot Previous Week High/Low/Close")
+plotPrevDayHighLowClose = input.bool(true, title="Plot Previous Day High/Low/Close")
 plotMonthlyOpeningPrint = input.bool(true, title="Plot Monthly Opening Print")
 plotWeeklyOpeningPrint = input.bool(true, title="Plot Weekly Opening Print")
 plotDailyOpeningPrint = input.bool(true, title="Plot Daily Opening Print")
@@ -51,9 +51,9 @@ var bool hideMonthlyAutomaticLevels = (timeframe.in_seconds(hideMonthlyAutomatic
 var bool hideAllAutomaticLevels = (timeframe.in_seconds(hideAllAutomaticLevelsHigherThan) / 60) < (timeframe.in_seconds() / 60)
 
 if hideAllAutomaticLevels
-    plotPrevMonthHighLow := false
-    plotPrevWeekHighLow := false
-    plotPrevDayHighLow := false
+    plotPrevMonthHighLowClose := false
+    plotPrevWeekHighLowClose := false
+    plotPrevDayHighLowClose := false
     plotMonthlyOpeningPrint := false
     plotWeeklyOpeningPrint := false
     plotDailyOpeningPrint := false
@@ -62,9 +62,9 @@ if hideAllAutomaticLevels
     plotWeeklyPivotLevels := false
     plotDailyPivotLevels := false
 else if hideMonthlyAutomaticLevels
-    plotPrevMonthHighLow := false
-    plotPrevWeekHighLow := false
-    plotPrevDayHighLow := false
+    plotPrevMonthHighLowClose := false
+    plotPrevWeekHighLowClose := false
+    plotPrevDayHighLowClose := false
     plotMonthlyOpeningPrint := false
     plotWeeklyOpeningPrint := false
     plotDailyOpeningPrint := false
@@ -72,80 +72,80 @@ else if hideMonthlyAutomaticLevels
     plotWeeklyPivotLevels := false
     plotDailyPivotLevels := false
 else if hideWeeklyAutomaticLevels
-    plotPrevDayHighLow := false
+    plotPrevDayHighLowClose := false
     plotWeeklyOpeningPrint := false
-    plotPrevWeekHighLow := false
+    plotPrevWeekHighLowClose := false
     plotDailyOpeningPrint := false
     plotWeeklyPivotLevels := false
     plotDailyPivotLevels := false
 else if hideDailyAutomaticLevels
-    plotPrevDayHighLow := false
+    plotPrevDayHighLowClose := false
     plotDailyOpeningPrint := false
     plotDailyPivotLevels := false
 
-// Volume calculations
+// --- Volume Calculations ---
 volumeSMA = ta.sma(volume, volumeMetricLength)
 higherVolumeThanPrev = volume > volume[1]
 lowerVolumeThanPrev = volume < volume[1]
-sufficientVolume = volume > volumeSMA * acceptableVolumeThreshold
+sufficientVolume = na(volume) ? true : volume > volumeSMA * acceptableVolumeThreshold
 volumeLessThanMetric = volume < volumeSMA
-if na(volume)
-    sufficientVolume := true
 
-// Price action calculations
+// --- Price Action Calculations ---
 body = math.abs(close - open)
 bodyHigh = math.max(open, close)
 bodyLow = math.min(open, close)
-highLow = math.abs(high - low)
+barRange = high - low 
 upperWick = high - bodyHigh
 lowerWick = bodyLow - low
-prevCandleBody = math.abs(close[1] - open[1])
 greenCandle = close >= open
 redCandle = close < open
-prevGreenCandle = close[1] >= open[1]
-prevRedCandle = close[1] < open[1]
-prevCandleMidPoint = high[1] - (math.abs(high[1] - low[1]) / 2)
 
-// ATR calculation using RTH only
+// Calculate previous candle's range and midpoint (cached to avoid duplicate math)
+prevCandleMidPoint = high[1] - (barRange[1] / 2)
+
+// --- ATR Calculation using RTH only ---
+var float atrSum = 0.0
 var trArray = array.new_float(0)
 isRTH = time(timeframe.period, "0930-1600:23456", "America/New_York") != 0 or timeframe.isdwm
+trValue = ta.tr(true)
 atrValue = 0.0
-tr = ta.tr(true)
 if isRTH
-    array.push(trArray, tr)
+    atrSum += trValue
+    array.push(trArray, trValue)
     if array.size(trArray) > atrLength
-        array.shift(trArray)
-    atrValue := array.sum(trArray) / array.size(trArray)
+        removed = array.shift(trArray)
+        atrSum -= removed
+    atrValue := atrSum / array.size(trArray)
 else
     atrValue := nz(atrValue[1])
 
-sufficientVolatility = highLow >= atrValue * acceptableVolatilityThreshold
+sufficientVolatility = barRange >= atrValue * acceptableVolatilityThreshold
 
-// Pre-computed conditions to avoid redundancy
+// --- Pre-computed Conditions ---
 sufficientVolumeAndVolatility = sufficientVolume and sufficientVolatility
-isVolumeNAorHigher = na(volume) or higherVolumeThanPrev
 
-// Determine candle types
-isDoji = showDojis and sufficientVolumeAndVolatility and body <= highLow * dojiBodyToTotalRatio
-isInsideBar = showInsideBars and sufficientVolumeAndVolatility and (high <= high[1] and low >= low[1])
+// --- Determine Candle Types ---
+isDoji = showDojis and sufficientVolumeAndVolatility and (body <= barRange * dojiBodyToTotalRatio)
+isInsideBar = showInsideBars and sufficientVolatility and (high <= high[1] and low >= low[1])
 isNotDojiAndSufficient = not isDoji and sufficientVolumeAndVolatility
-isHammer = showHammers and isNotDojiAndSufficient and lowerWick >= body * hammerBodyToTotalRatio and upperWick <= highLow * shortWickToTotalRatio
-isShooter = showShooters and isNotDojiAndSufficient and upperWick >= body * hammerBodyToTotalRatio and lowerWick <= highLow * shortWickToTotalRatio
-isBullishReversalBar = showReversalBar and isNotDojiAndSufficient and greenCandle and high >= prevCandleMidPoint and ((body * reversalBarShortWick) >= upperWick) and (prevRedCandle or (prevGreenCandle and body >= prevCandleBody * 5))
-isBearishReversalBar = showReversalBar and isNotDojiAndSufficient and redCandle and low <= prevCandleMidPoint and ((body * reversalBarShortWick) >= lowerWick) and (prevGreenCandle or (prevRedCandle and body >= prevCandleBody * 5))
+
+isHammer = showHammers and isNotDojiAndSufficient and (lowerWick >= body * hammerBodyToTotalRatio) and (upperWick <= barRange * shortWickToTotalRatio)
+isShooter = showShooters and isNotDojiAndSufficient and (upperWick >= body * hammerBodyToTotalRatio) and (lowerWick <= barRange * shortWickToTotalRatio)
+
+isBullishReversalBar = showReversalBar and isNotDojiAndSufficient and greenCandle and (high >= prevCandleMidPoint) and ((body * reversalBarShortWick) >= upperWick) and (redCandle[1] or (greenCandle[1] and body >= body[1] * 5))
+isBearishReversalBar = showReversalBar and isNotDojiAndSufficient and redCandle and (low <= prevCandleMidPoint) and ((body * reversalBarShortWick) >= lowerWick) and (greenCandle[1] or (redCandle[1] and body >= body[1] * 5))
+
 notCandlestickIndication = not isDoji and not isHammer and not isShooter and not isInsideBar
 
-// High volume anomalies
+// --- Volume Anomalies ---
 isHighVolumeAnomalyCondition = showHVAnomalies and higherVolumeThanPrev and sufficientVolumeAndVolatility
-bullishHighVolumeAnomaly = isHighVolumeAnomalyCondition and redCandle and prevRedCandle and body < prevCandleBody
-bearishHighVolumeAnomaly = isHighVolumeAnomalyCondition and greenCandle and prevGreenCandle and body < prevCandleBody
+bullishHighVolumeAnomaly = isHighVolumeAnomalyCondition and redCandle and redCandle[1] and (body < body[1])
+bearishHighVolumeAnomaly = isHighVolumeAnomalyCondition and greenCandle and greenCandle[1] and (body < body[1])
 
-// Low volume anomalies
 isLowVolumeAnomalyCondition = showLVAnomalies and volumeLessThanMetric and lowerVolumeThanPrev and sufficientVolumeAndVolatility
-bullishLowVolumeAnomaly = isLowVolumeAnomalyCondition and redCandle and prevRedCandle and body > prevCandleBody 
-bearishLowVolumeAnomaly = isLowVolumeAnomalyCondition and greenCandle and prevGreenCandle and body > prevCandleBody 
+bullishLowVolumeAnomaly = isLowVolumeAnomalyCondition and redCandle and redCandle[1] and (body > body[1])
+bearishLowVolumeAnomaly = isLowVolumeAnomalyCondition and greenCandle and greenCandle[1] and (body > body[1])
 
-// Volume Anomalies
 bullishVolumeAnomaly = bullishHighVolumeAnomaly or bullishLowVolumeAnomaly
 bearishVolumeAnomaly = bearishHighVolumeAnomaly or bearishLowVolumeAnomaly
 
@@ -226,7 +226,7 @@ getHighLowOpenClose() =>
     [high[1], low[1], open, close[1]]
 
 getHigherTimeframeData(timeframe) =>
-    request.security(syminfo.tickerid, timeframe, getHighLowOpenClose(), lookahead=barmerge.lookahead_on)
+    request.security(syminfo.tickerid, timeframe, getHighLowOpenClose(), lookahead=barmerge.lookahead_on, calc_bars_count = 2)
 
 // Determine if we need to execute the logic at open and close
 var bool executedDailyLogic = false
@@ -235,9 +235,6 @@ if barstate.islast
     currentSession = getSession()
     if (prevMarketSession == "P" and currentSession == "M") or (prevMarketSession == "M" and currentSession == "A")
         executedDailyLogic := false
-
-barIsLastAndNotExecutedDailyLogic = not executedDailyLogic and barstate.islast
-dailyGaps = request.security(syminfo.tickerid, "D", barIsLastAndNotExecutedDailyLogic and showDailyGaps ? getGaps(gapLookback) : map.new<int, string>(), lookahead=barmerge.lookahead_on)
 
 var box[] boxIds = array.new_box()
 var line[] lineIds = array.new_line()
@@ -254,116 +251,101 @@ clearLines() =>
             line.delete(id)
     array.clear(lineIds)
 
-// Plot automatic levels and daily gaps
-if barIsLastAndNotExecutedDailyLogic
+// Calculate pivot levels given high, low, and close
+calcPivots(_high, _low, _close) =>
+    sr3 = _high - _low
+    sr1 = sr3 * 0.382
+    sr2 = sr3 * 0.618
+    pp   = (_high + _low + _close) / 3
+    r1   = pp + sr1
+    s1   = pp - sr1
+    r2   = pp + sr2
+    s2   = pp - sr2
+    r3   = pp + sr3
+    s3   = pp - sr3
+    [pp, r1, s1, r2, s2, r3, s3]
+
+// Draw a level line and push its ID into lineIds
+drawLevel(_level, _width, _color, _style) =>
+    array.push(lineIds, line.new(bar_index, _level, bar_index + 1, _level, 
+      xloc.bar_index, extend.both, color=_color, style=_style, width=_width))
+
+// Execute this block only once on the last bar and if daily logic hasn't been executed
+if not executedDailyLogic and barstate.islast
     clearLines()
-    // Plot daily automatic levels
+    
+    // ----- Daily Levels -----
     [prevDayHigh, prevDayLow, currentDayOpen, prevDayClose] = getHigherTimeframeData("D")
     if plotDailyPivotLevels
-        dailySR3 = prevDayHigh - prevDayLow
-        dailySR1 = dailySR3 * 0.382
-        dailySR2 = dailySR3 * 0.618
-        dailyPivotPP = (prevDayHigh + prevDayLow + prevDayClose) / 3
-        dailyPivotR1 = dailyPivotPP + dailySR1
-        dailyPivotS1 = dailyPivotPP - dailySR1
-        dailyPivotR2 = dailyPivotPP + dailySR2
-        dailyPivotS2 = dailyPivotPP - dailySR2
-        dailyPivotR3 = dailyPivotPP + dailySR3
-        dailyPivotS3 = dailyPivotPP - dailySR3
-        array.push(lineIds, line.new(bar_index, dailyPivotPP, bar_index + 1, dailyPivotPP, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid))
-        array.push(lineIds, line.new(bar_index, dailyPivotR1, bar_index + 1, dailyPivotR1, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid))
-        array.push(lineIds, line.new(bar_index, dailyPivotS1, bar_index + 1, dailyPivotS1, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid))
-        array.push(lineIds, line.new(bar_index, dailyPivotR2, bar_index + 1, dailyPivotR2, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid))
-        array.push(lineIds, line.new(bar_index, dailyPivotS2, bar_index + 1, dailyPivotS2, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid))
-        array.push(lineIds, line.new(bar_index, dailyPivotR3, bar_index + 1, dailyPivotR3, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid))
-        array.push(lineIds, line.new(bar_index, dailyPivotS3, bar_index + 1, dailyPivotS3, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid))
-    if plotPrevDayHighLow
-        array.push(lineIds, line.new(bar_index, prevDayHigh, bar_index + 1, prevDayHigh, xloc.bar_index, extend.both, color = highPriceLevelColor, style = line.style_dotted, width = 2))
-        array.push(lineIds, line.new(bar_index, prevDayLow, bar_index + 1, prevDayLow, xloc.bar_index, extend.both, color = lowPriceLevelColor, style = line.style_dotted, width = 2))
-        array.push(lineIds, line.new(bar_index, prevDayClose, bar_index + 1, prevDayClose, xloc.bar_index, extend.both, color = closePriceLevelColor, style = line.style_dotted, width = 2))
+        [dailyPP, dailyR1, dailyS1, dailyR2, dailyS2, dailyR3, dailyS3] = calcPivots(prevDayHigh, prevDayLow, prevDayClose)
+        drawLevel(dailyPP, 1, pivotLevelColor, line.style_solid)
+        drawLevel(dailyR1, 1, pivotLevelColor, line.style_solid)
+        drawLevel(dailyS1, 1, pivotLevelColor, line.style_solid)
+        drawLevel(dailyR2, 1, pivotLevelColor, line.style_solid)
+        drawLevel(dailyS2, 1, pivotLevelColor, line.style_solid)
+        drawLevel(dailyR3, 1, pivotLevelColor, line.style_solid)
+        drawLevel(dailyS3, 1, pivotLevelColor, line.style_solid)
+    if plotPrevDayHighLowClose
+        drawLevel(prevDayHigh, 2, highPriceLevelColor, line.style_dotted)
+        drawLevel(prevDayLow, 2, lowPriceLevelColor, line.style_dotted)
+        drawLevel(prevDayClose, 2, closePriceLevelColor, line.style_dotted)
     if plotDailyOpeningPrint
-        array.push(lineIds, line.new(bar_index, currentDayOpen, bar_index + 1, currentDayOpen, xloc.bar_index, extend.both, color = openingPrintColor, style = line.style_dotted, width = 2))
+        drawLevel(currentDayOpen, 2, openingPrintColor, line.style_dotted)
     
-    // Plot weekly automatic levels
+    // ----- Weekly Levels -----
     [prevWeekHigh, prevWeekLow, currentWeekOpen, prevWeekClose] = getHigherTimeframeData("W")
     if plotWeeklyPivotLevels
-        weeklySR3 = prevWeekHigh - prevWeekLow
-        weeklySR1 = weeklySR3 * 0.382
-        weeklySR2 = weeklySR3 * 0.618
-        weeklyPivotPP = (prevWeekHigh + prevWeekLow + prevWeekClose) / 3
-        weeklyPivotR1 = weeklyPivotPP + weeklySR1
-        weeklyPivotS1 = weeklyPivotPP - weeklySR1
-        weeklyPivotR2 = weeklyPivotPP + weeklySR2
-        weeklyPivotS2 = weeklyPivotPP - weeklySR2
-        weeklyPivotR3 = weeklyPivotPP + weeklySR3
-        weeklyPivotS3 = weeklyPivotPP - weeklySR3
-        array.push(lineIds, line.new(bar_index, weeklyPivotPP, bar_index + 1, weeklyPivotPP, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 2))
-        array.push(lineIds, line.new(bar_index, weeklyPivotR1, bar_index + 1, weeklyPivotR1, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 2))
-        array.push(lineIds, line.new(bar_index, weeklyPivotS1, bar_index + 1, weeklyPivotS1, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 2))
-        array.push(lineIds, line.new(bar_index, weeklyPivotR2, bar_index + 1, weeklyPivotR2, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 2))
-        array.push(lineIds, line.new(bar_index, weeklyPivotS2, bar_index + 1, weeklyPivotS2, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 2))
-        array.push(lineIds, line.new(bar_index, weeklyPivotR3, bar_index + 1, weeklyPivotR3, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 2))
-        array.push(lineIds, line.new(bar_index, weeklyPivotS3, bar_index + 1, weeklyPivotS3, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 2))
-    if plotPrevWeekHighLow
-        array.push(lineIds, line.new(bar_index, prevWeekHigh, bar_index + 1, prevWeekHigh, xloc.bar_index, extend.both, color = highPriceLevelColor, style = line.style_dotted, width = 3))
-        array.push(lineIds, line.new(bar_index, prevWeekLow, bar_index + 1, prevWeekLow, xloc.bar_index, extend.both, color = lowPriceLevelColor, style = line.style_dotted, width = 3))
-        array.push(lineIds, line.new(bar_index, prevWeekClose, bar_index + 1, prevWeekClose, xloc.bar_index, extend.both, color = closePriceLevelColor, style = line.style_dotted, width = 3))
+        [weeklyPP, weeklyR1, weeklyS1, weeklyR2, weeklyS2, weeklyR3, weeklyS3] = calcPivots(prevWeekHigh, prevWeekLow, prevWeekClose)
+        drawLevel(weeklyPP, 2, pivotLevelColor, line.style_solid)
+        drawLevel(weeklyR1, 2, pivotLevelColor, line.style_solid)
+        drawLevel(weeklyS1, 2, pivotLevelColor, line.style_solid)
+        drawLevel(weeklyR2, 2, pivotLevelColor, line.style_solid)
+        drawLevel(weeklyS2, 2, pivotLevelColor, line.style_solid)
+        drawLevel(weeklyR3, 2, pivotLevelColor, line.style_solid)
+        drawLevel(weeklyS3, 2, pivotLevelColor, line.style_solid)
+    if plotPrevWeekHighLowClose
+        drawLevel(prevWeekHigh, 3, highPriceLevelColor, line.style_dotted)
+        drawLevel(prevWeekLow, 3, lowPriceLevelColor, line.style_dotted)
+        drawLevel(prevWeekClose, 3, closePriceLevelColor, line.style_dotted)
     if plotWeeklyOpeningPrint
-        array.push(lineIds, line.new(bar_index, currentWeekOpen, bar_index + 1, currentWeekOpen, xloc.bar_index, extend.both, color = openingPrintColor, style = line.style_dotted, width = 3))
-
-    // Plot monthly automatic levels
+        drawLevel(currentWeekOpen, 3, openingPrintColor, line.style_dotted)
+    
+    // ----- Monthly Levels -----
     [prevMonthHigh, prevMonthLow, currentMonthOpen, prevMonthClose] = getHigherTimeframeData("M")
     if plotMonthlyPivotLevels
-        monthlySR3 = prevMonthHigh - prevMonthLow
-        monthlySR1 = monthlySR3 * 0.382
-        monthlySR2 = monthlySR3 * 0.618
-        monthlyPivotPP = (prevMonthHigh + prevMonthLow + prevMonthClose) / 3
-        monthlyPivotR1 = monthlyPivotPP + monthlySR1
-        monthlyPivotS1 = monthlyPivotPP - monthlySR1
-        monthlyPivotR2 = monthlyPivotPP + monthlySR2
-        monthlyPivotS2 = monthlyPivotPP - monthlySR2
-        monthlyPivotR3 = monthlyPivotPP + monthlySR3
-        monthlyPivotS3 = monthlyPivotPP - monthlySR3
-        array.push(lineIds, line.new(bar_index, monthlyPivotPP, bar_index + 1, monthlyPivotPP, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 3))
-        array.push(lineIds, line.new(bar_index, monthlyPivotR1, bar_index + 1, monthlyPivotR1, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 3))
-        array.push(lineIds, line.new(bar_index, monthlyPivotS1, bar_index + 1, monthlyPivotS1, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 3))
-        array.push(lineIds, line.new(bar_index, monthlyPivotR2, bar_index + 1, monthlyPivotR2, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 3))
-        array.push(lineIds, line.new(bar_index, monthlyPivotS2, bar_index + 1, monthlyPivotS2, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 3))
-        array.push(lineIds, line.new(bar_index, monthlyPivotR3, bar_index + 1, monthlyPivotR3, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 3))
-        array.push(lineIds, line.new(bar_index, monthlyPivotS3, bar_index + 1, monthlyPivotS3, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 3))
-    if plotPrevMonthHighLow
-        array.push(lineIds, line.new(bar_index, prevMonthHigh, bar_index + 1, prevMonthHigh, xloc.bar_index, extend.both, color = highPriceLevelColor, style = line.style_dotted, width = 5))
-        array.push(lineIds, line.new(bar_index, prevMonthLow, bar_index + 1, prevMonthLow, xloc.bar_index, extend.both, color = lowPriceLevelColor, style = line.style_dotted, width = 5))
-        array.push(lineIds, line.new(bar_index, prevMonthClose, bar_index + 1, prevMonthClose, xloc.bar_index, extend.both, color = closePriceLevelColor, style = line.style_dotted, width = 5))
+        [monthlyPP, monthlyR1, monthlyS1, monthlyR2, monthlyS2, monthlyR3, monthlyS3] = calcPivots(prevMonthHigh, prevMonthLow, prevMonthClose)
+        drawLevel(monthlyPP, 3, pivotLevelColor, line.style_solid)
+        drawLevel(monthlyR1, 3, pivotLevelColor, line.style_solid)
+        drawLevel(monthlyS1, 3, pivotLevelColor, line.style_solid)
+        drawLevel(monthlyR2, 3, pivotLevelColor, line.style_solid)
+        drawLevel(monthlyS2, 3, pivotLevelColor, line.style_solid)
+        drawLevel(monthlyR3, 3, pivotLevelColor, line.style_solid)
+        drawLevel(monthlyS3, 3, pivotLevelColor, line.style_solid)
+    if plotPrevMonthHighLowClose
+        drawLevel(prevMonthHigh, 5, highPriceLevelColor, line.style_dotted)
+        drawLevel(prevMonthLow, 5, lowPriceLevelColor, line.style_dotted)
+        drawLevel(prevMonthClose, 5, closePriceLevelColor, line.style_dotted)
     if plotMonthlyOpeningPrint
-        array.push(lineIds, line.new(bar_index, currentMonthOpen, bar_index + 1, currentMonthOpen, xloc.bar_index, extend.both, color = openingPrintColor, style = line.style_dotted, width = 5))
+        drawLevel(currentMonthOpen, 5, openingPrintColor, line.style_dotted)
     
-    // Plot yearly automatic levels
+    // ----- Yearly Levels -----
     if plotYearlyPivotLevels
         [prevYearHigh, prevYearLow, currentYearOpen, prevYearClose] = getHigherTimeframeData("12M")
-        yearlySR3 = prevYearHigh - prevYearLow
-        yearlySR1 = yearlySR3 * 0.382
-        yearlySR2 = yearlySR3 * 0.618
-        yearlyPivotPP = (prevYearHigh + prevYearLow + prevYearClose) / 3
-        yearlyPivotR1 = yearlyPivotPP + yearlySR1
-        yearlyPivotS1 = yearlyPivotPP - yearlySR1
-        yearlyPivotR2 = yearlyPivotPP + yearlySR2
-        yearlyPivotS2 = yearlyPivotPP - yearlySR2
-        yearlyPivotR3 = yearlyPivotPP + yearlySR3
-        yearlyPivotS3 = yearlyPivotPP - yearlySR3
-        array.push(lineIds, line.new(bar_index, yearlyPivotPP, bar_index + 1, yearlyPivotPP, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 5))
-        array.push(lineIds, line.new(bar_index, yearlyPivotR1, bar_index + 1, yearlyPivotR1, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 5))
-        array.push(lineIds, line.new(bar_index, yearlyPivotS1, bar_index + 1, yearlyPivotS1, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 5))
-        array.push(lineIds, line.new(bar_index, yearlyPivotR2, bar_index + 1, yearlyPivotR2, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 5))
-        array.push(lineIds, line.new(bar_index, yearlyPivotS2, bar_index + 1, yearlyPivotS2, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 5))
-        array.push(lineIds, line.new(bar_index, yearlyPivotR3, bar_index + 1, yearlyPivotR3, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 5))
-        array.push(lineIds, line.new(bar_index, yearlyPivotS3, bar_index + 1, yearlyPivotS3, xloc.bar_index, extend.both, color = pivotLevelColor, style = line.style_solid, width = 5))
+        [yearlyPP, yearlyR1, yearlyS1, yearlyR2, yearlyS2, yearlyR3, yearlyS3] = calcPivots(prevYearHigh, prevYearLow, prevYearClose)
+        drawLevel(yearlyPP, 5, pivotLevelColor, line.style_solid)
+        drawLevel(yearlyR1, 5, pivotLevelColor, line.style_solid)
+        drawLevel(yearlyS1, 5, pivotLevelColor, line.style_solid)
+        drawLevel(yearlyR2, 5, pivotLevelColor, line.style_solid)
+        drawLevel(yearlyS2, 5, pivotLevelColor, line.style_solid)
+        drawLevel(yearlyR3, 5, pivotLevelColor, line.style_solid)
+        drawLevel(yearlyS3, 5, pivotLevelColor, line.style_solid)
 
     // Plot daily gaps
     if timeframe.isintraday or timeframe.isdaily
         if showDailyGaps
             clearBoxes()
             gapEnd = time + timeframe.in_seconds()
+            dailyGaps = request.security(syminfo.tickerid, "D", not executedDailyLogic and barstate.islast ? getGaps(gapLookback) : map.new<int, string>(), lookahead=barmerge.lookahead_on, calc_bars_count = gapLookback)
             for [key, value] in dailyGaps
                 gapOriginalAndPartial = str.split(value, ":")
                 gapHighAndLow = str.split(array.get(gapOriginalAndPartial, usePartialFill ? 1 : 0), ",")
@@ -377,33 +359,72 @@ if barIsLastAndNotExecutedDailyLogic
 if barstate.islast
     prevMarketSession := getSession()
 
-// Plot hammers
-plotshape(isHammer and not bullishVolumeAnomaly and not isInsideBar, style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="H")
-plotshape(isHammer and not bullishVolumeAnomaly and isInsideBar, style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="HI")
-plotshape(isHammer and bullishVolumeAnomaly and not isInsideBar, style=shape.triangleup, location=location.belowbar, color=color.rgb(211, 48, 176), textcolor=color.rgb(255, 255, 255), text="HA")
+// Pre-calculate combined conditions to avoid recalculation each plotshape call
+hammerNoBVA   = isHammer and not bullishVolumeAnomaly
+shooterNoBVA  = isShooter and not bearishVolumeAnomaly
+notInsideBar  = not isInsideBar
 
-// Plot shooters
-plotshape(isShooter and not bearishVolumeAnomaly and not isInsideBar, style=shape.triangledown, location=location.abovebar, color=color.rgb(255, 155, 93), textcolor=color.rgb(255, 255, 255), text="S")
-plotshape(isShooter and not bearishVolumeAnomaly and isInsideBar, style=shape.triangledown, location=location.abovebar, color=color.rgb(255, 155, 93), textcolor=color.rgb(255, 255, 255), text="SI")
-plotshape(isShooter and bearishVolumeAnomaly and not isInsideBar, style=shape.triangledown, location=location.abovebar, color=color.rgb(255, 155, 93), textcolor=color.rgb(255, 255, 255), text="SA")
+// Plot Hammers
+plotshape(hammerNoBVA and notInsideBar, style=shape.triangleup, location=location.belowbar, 
+     color=color.rgb(211,48,176), textcolor=color.rgb(255,255,255), text="H")
 
-// Plots dojis
-plotshape(isDoji and not higherVolumeThanPrev and not isInsideBar, style=shape.triangledown, location=location.abovebar, color=color.rgb(201, 55, 55), textcolor=color.rgb(255, 255, 255), text="D")
-plotshape(isDoji and isInsideBar, style=shape.triangledown, location=location.abovebar, color=color.rgb(201, 55, 55), textcolor=color.rgb(255, 255, 255), text="DI")
-plotshape(isDoji and higherVolumeThanPrev and not isInsideBar, style=shape.triangledown, location=location.abovebar, color=color.rgb(201, 55, 55), textcolor=color.rgb(255, 255, 255), text="DA")
+plotshape(hammerNoBVA and isInsideBar, style=shape.triangleup, location=location.belowbar, 
+     color=color.rgb(211,48,176), textcolor=color.rgb(255,255,255), text="HI")
 
-// Plots inside bars
-plotshape(isInsideBar and not isDoji and not isShooter and not isHammer and not isBearishReversalBar and not isBullishReversalBar, style=shape.triangledown, location=location.abovebar, color=color.rgb(201, 55, 55), textcolor=color.rgb(255, 255, 255), text="I")
+plotshape(isHammer and bullishVolumeAnomaly and notInsideBar, style=shape.triangleup, location=location.belowbar, 
+     color=color.rgb(211,48,176), textcolor=color.rgb(255,255,255), text="HA")
 
-// Plot reversal bar
-plotshape(isBearishReversalBar and not isShooter and not isInsideBar, style=shape.triangledown, location=location.abovebar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="R")
-plotshape(isBearishReversalBar and not isShooter and isInsideBar, style=shape.triangledown, location=location.abovebar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="RI")
-plotshape(isBullishReversalBar and not isHammer and not isInsideBar, style=shape.triangleup, location=location.belowbar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="R")
-plotshape(isBullishReversalBar and not isHammer and isInsideBar, style=shape.triangleup, location=location.belowbar, color=color.rgb(51, 129, 201), textcolor=color.rgb(255, 255, 255), text="RI")
+// Plot Shooters
+plotshape(shooterNoBVA and notInsideBar, style=shape.triangledown, location=location.abovebar, 
+     color=color.rgb(255,155,93), textcolor=color.rgb(255,255,255), text="S")
 
-// Plot volume anomalies
-plotshape(bullishHighVolumeAnomaly and notCandlestickIndication, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A")
-plotshape(bearishHighVolumeAnomaly and notCandlestickIndication, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A")
+plotshape(shooterNoBVA and isInsideBar, style=shape.triangledown, location=location.abovebar, 
+     color=color.rgb(255,155,93), textcolor=color.rgb(255,255,255), text="SI")
 
-plotshape(bullishLowVolumeAnomaly and notCandlestickIndication, location=location.belowbar, color=color.rgb(255, 238, 88), style=shape.triangleup, textcolor=color.rgb(255, 255, 255), text="A")
-plotshape(bearishLowVolumeAnomaly and notCandlestickIndication, location=location.abovebar, color=color.rgb(255, 238, 88), style=shape.triangledown, textcolor=color.rgb(255, 255, 255), text="A")
+plotshape(isShooter and bearishVolumeAnomaly and notInsideBar, style=shape.triangledown, location=location.abovebar, 
+     color=color.rgb(255,155,93), textcolor=color.rgb(255,255,255), text="SA")
+
+// Plot Dojis
+plotshape(isDoji and not higherVolumeThanPrev and notInsideBar, style=shape.triangledown, location=location.abovebar, 
+     color=color.rgb(145, 145, 145), textcolor=color.rgb(255,255,255), text="D")
+
+plotshape(isDoji and isInsideBar, style=shape.triangledown, location=location.abovebar, 
+     color=color.rgb(145, 145, 145), textcolor=color.rgb(255,255,255), text="DI")
+
+plotshape(isDoji and higherVolumeThanPrev and notInsideBar, style=shape.triangledown, location=location.abovebar, 
+     color=color.rgb(145, 145, 145), textcolor=color.rgb(255,255,255), text="DA")
+
+// Plot Inside Bars
+plotshape(isInsideBar and not isDoji and not isShooter and not isHammer and not isBearishReversalBar and not isBullishReversalBar, 
+     style=shape.triangledown, location=location.abovebar, color=color.rgb(46, 119, 255), 
+     textcolor=color.rgb(255,255,255), text="I")
+
+// Plot Reversal Bars
+plotshape(isBearishReversalBar and not isShooter and notInsideBar, 
+     style=shape.triangledown, location=location.abovebar, color=color.rgb(201, 51, 51), 
+     textcolor=color.rgb(255,255,255), text="R")
+
+plotshape(isBearishReversalBar and not isShooter and isInsideBar, 
+     style=shape.triangledown, location=location.abovebar, color=color.rgb(201, 51, 51), 
+     textcolor=color.rgb(255,255,255), text="RI")
+
+plotshape(isBullishReversalBar and not isHammer and notInsideBar, 
+     style=shape.triangleup, location=location.belowbar, color=color.rgb(0, 151, 8), 
+     textcolor=color.rgb(255,255,255), text="R")
+
+plotshape(isBullishReversalBar and not isHammer and isInsideBar, 
+     style=shape.triangleup, location=location.belowbar, color=color.rgb(0, 151, 8), 
+     textcolor=color.rgb(255,255,255), text="RI")
+
+// Plot Volume Anomalies
+plotshape(bullishHighVolumeAnomaly and notCandlestickIndication, location=location.belowbar, 
+     color=color.rgb(255,238,88), style=shape.triangleup, textcolor=color.rgb(255,255,255), text="A")
+
+plotshape(bearishHighVolumeAnomaly and notCandlestickIndication, location=location.abovebar, 
+     color=color.rgb(255,238,88), style=shape.triangledown, textcolor=color.rgb(255,255,255), text="A")
+
+plotshape(bullishLowVolumeAnomaly and notCandlestickIndication, location=location.belowbar, 
+     color=color.rgb(255,238,88), style=shape.triangleup, textcolor=color.rgb(255,255,255), text="A")
+
+plotshape(bearishLowVolumeAnomaly and notCandlestickIndication, location=location.abovebar, 
+     color=color.rgb(255,238,88), style=shape.triangledown, textcolor=color.rgb(255,255,255), text="A")
