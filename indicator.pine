@@ -1,23 +1,23 @@
 // This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
 
 //@version=6
-indicator("Volume Price Analysis Indicator", shorttitle="VPA", overlay=true, calc_bars_count=1000)
+indicator("Volume Price Analysis Indicator", shorttitle="VPA", overlay=true, calc_bars_count=1000, max_bars_back = 1000)
 
 // User Inputs
 showHammers = input.bool(true, title="Show Hammers")
 showShooters = input.bool(true, title="Show Shooters")
 hammerBodyToTotalRatio = input(2.0, title="Hammer/Shooter Long Wick to Body Multiplier", tooltip="Set the multiplier for the minimum lower wick to body ratio for identifying hammers and upper wick to body ratio for identifying shooters.")
-shortWickToTotalRatio = input(0.15, title="Hammer/Shooter Short Wick to Total Multiplier", tooltip="Set the multiplier for the maximum upper wick to total candle range ratio for identifying hammers and lower wick to total candle range ratio for identifying shooters.")
-reversalBarShortWick = input(0.35, title="Reversal Bar Short Wick to Body Multiplier", tooltip="Set the multiplier for the maximum short wick to body ratio for identifying reversal bars.")
+shortWickToTotalRatio = input(0.15, title="Hammer/Shooter Short Wick to Range Multiplier", tooltip="Set the multiplier for the maximum upper wick to total bar range ratio for identifying hammers and lower wick to total bar range ratio for identifying shooters.")
+reversalBarShortWick = input(0.25, title="Reversal Bar Short Wick to Range Multiplier", tooltip="Set the multiplier for the maximum short wick to total bar range ratio for identifying reversal bars.")
 showDojis = input.bool(true, title="Show Dojis")
-dojiBodyToTotalRatio = input(0.10, title="Doji Body to Total Multiplier", tooltip="Set the maximum body to total candle range ratio for identifying doji candlesticks.")
+dojiBodyToTotalRatio = input(0.10, title="Doji Body to Range Multiplier", tooltip="Set the maximum body to total bar range ratio for identifying doji bars.")
 showInsideBars = input.bool(true, title="Show Inside Bars")
 showReversalBar = input.bool(true, title="Show Reversal Bars")
 showHVAnomalies = input.bool(true, title="Show High Volume Anomalies")
 showLVAnomalies = input.bool(true, title="Show Low Volume Anomalies")
-acceptableVolumeThreshold = input(0.33, title="Acceptable Volume Threshold", tooltip="Set the minimum volume threshold as a multiple of the volume average (e.g., 0.33x volume average). Candlesticks with volume below this threshold will not display candlestick indications.")
+acceptableVolumeThreshold = input(0.33, title="Acceptable Volume Threshold", tooltip="Set the minimum volume threshold as a multiple of the volume average (e.g., 0.33x volume average). Bars with volume below this threshold will not display indications.")
 volumeMetricLength = input.int(50, minval=10, maxval=500, title="Volume SMA Length", tooltip="Set the length for the volume SMA calculation.")
-acceptableVolatilityThreshold = input(0.33, title="Acceptable Volatility Threshold", tooltip="Set the minimum volatility threshold as a multiple of the ATR (e.g., 0.5x ATR). Candlesticks with volatility below this threshold will not display candlestick indications.")
+acceptableVolatilityThreshold = input(0.33, title="Acceptable Volatility Threshold", tooltip="Set the minimum volatility threshold as a multiple of the ATR (e.g., 0.5x ATR). Bars with volatility below this threshold will not display indications.")
 atrLength = input(14, title="ATR Length", tooltip="Set the length of the ATR calculation.")
 showDailyGaps = input.bool(true, title="Show Daily Gaps")
 usePartialFill = input.bool(false, title = "Use Partial Gap Filling", tooltip = "Enable to shrink gap boundaries as price fills them. Disable to keep gaps at their original boundaries until fully filled.")
@@ -132,8 +132,44 @@ isNotDojiAndSufficient = not isDoji and sufficientVolumeAndVolatility
 isHammer = showHammers and isNotDojiAndSufficient and (lowerWick >= body * hammerBodyToTotalRatio) and (upperWick <= barRange * shortWickToTotalRatio)
 isShooter = showShooters and isNotDojiAndSufficient and (upperWick >= body * hammerBodyToTotalRatio) and (lowerWick <= barRange * shortWickToTotalRatio)
 
-isBullishReversalBar = showReversalBar and isNotDojiAndSufficient and greenCandle and (high >= prevCandleMidPoint) and ((body * reversalBarShortWick) >= upperWick) and (redCandle[1] or (greenCandle[1] and body >= body[1] * 5))
-isBearishReversalBar = showReversalBar and isNotDojiAndSufficient and redCandle and (low <= prevCandleMidPoint) and ((body * reversalBarShortWick) >= lowerWick) and (greenCandle[1] or (redCandle[1] and body >= body[1] * 5))
+// --- Pre-calculate Variables for Reversal Conditions ---
+float halfRange = barRange / 2
+
+// Bullish Reversal Bar: Should be mostly body or lower wick, closing near its high, and near the last swing low
+isBullishReversalBar = showReversalBar and sufficientVolatility and greenCandle and (close >= prevCandleMidPoint) and (body >= halfRange * 0.9 or (lowerWick >= halfRange * 0.9)) and ((barRange * reversalBarShortWick) >= upperWick)
+
+if isBullishReversalBar
+    float swingLow  = na
+    float tolerance = 0.0
+        // --- Swing Low Detection ---
+    if low <= math.min(low[1], low[2])
+        swingLow := math.min(close, open)
+        tolerance := barRange / 4
+    else if low[1] <= math.min(low[2], low[3])
+        swingLow := math.min(close[1], open[1])
+        tolerance := barRange[1] / 4
+    else if low[2] <= math.min(low[3], low[4])
+        swingLow := math.min(close[2], open[2])
+        tolerance := barRange[2] / 4
+    isBullishReversalBar := math.abs(open - swingLow) <= tolerance
+
+// Bearish Reversal Bar: Should be mostly body or upper wick, closing near its low, and near the last swing high
+isBearishReversalBar = showReversalBar and sufficientVolatility and redCandle and (low <= prevCandleMidPoint) and (body >= halfRange * 0.9 or (upperWick >= halfRange * 0.9)) and ((barRange * reversalBarShortWick) >= lowerWick)
+
+if isBearishReversalBar
+    float swingHigh = na
+    float tolerance = 0.0
+    // --- Swing High Detection ---
+    if high >= math.max(high[1], high[2])
+        swingHigh := math.max(close, open)
+        tolerance := barRange / 4
+    else if high[1] >= math.max(high[2], high[3])
+        swingHigh := math.max(close[1], open[1])
+        tolerance := barRange[1] / 4
+    else if high[2] >= math.max(high[3], high[4])
+        swingHigh := math.max(close[2], open[2])
+        tolerance := barRange[2] / 4
+    isBearishReversalBar := math.abs(swingHigh - open) <= tolerance
 
 notCandlestickIndication = not isDoji and not isHammer and not isShooter and not isInsideBar
 
