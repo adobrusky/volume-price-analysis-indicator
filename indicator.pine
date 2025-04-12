@@ -139,37 +139,45 @@ float halfRange = barRange / 2
 isBullishReversalBar = showReversalBar and sufficientVolatility and greenCandle and (close >= prevCandleMidPoint) and (body >= halfRange * 0.9 or (lowerWick >= halfRange * 0.9)) and ((barRange * reversalBarShortWick) >= upperWick)
 
 if isBullishReversalBar
+    float swingLowOpen  = na
     float swingLow  = na
     float tolerance = 0.0
         // --- Swing Low Detection ---
     if low <= math.min(low[1], low[2])
-        swingLow := math.min(close, open)
+        swingLowOpen := math.min(close, open)
+        swingLow := low
         tolerance := barRange / 4
     else if low[1] <= math.min(low[2], low[3])
-        swingLow := math.min(close[1], open[1])
+        swingLowOpen := math.min(close[1], open[1])
+        swingLow := low[1]
         tolerance := barRange[1] / 4
     else if low[2] <= math.min(low[3], low[4])
-        swingLow := math.min(close[2], open[2])
+        swingLowOpen := math.min(close[2], open[2])
+        swingLow := low[2]
         tolerance := barRange[2] / 4
-    isBullishReversalBar := math.abs(open - swingLow) <= tolerance
+    isBullishReversalBar := math.abs(open - swingLowOpen) <= tolerance or math.abs(open - swingLow) <= tolerance
 
 // Bearish Reversal Bar: Should be mostly body or upper wick, closing near its low, and near the last swing high
 isBearishReversalBar = showReversalBar and sufficientVolatility and redCandle and (low <= prevCandleMidPoint) and (body >= halfRange * 0.9 or (upperWick >= halfRange * 0.9)) and ((barRange * reversalBarShortWick) >= lowerWick)
 
 if isBearishReversalBar
+    float swingHighOpen = na
     float swingHigh = na
     float tolerance = 0.0
     // --- Swing High Detection ---
     if high >= math.max(high[1], high[2])
-        swingHigh := math.max(close, open)
+        swingHighOpen := math.max(close, open)
+        swingHigh := high
         tolerance := barRange / 4
     else if high[1] >= math.max(high[2], high[3])
-        swingHigh := math.max(close[1], open[1])
+        swingHighOpen := math.max(close[1], open[1])
+        swingHigh := high[1]
         tolerance := barRange[1] / 4
     else if high[2] >= math.max(high[3], high[4])
-        swingHigh := math.max(close[2], open[2])
+        swingHighOpen := math.max(close[2], open[2])
+        swingHigh := high[2]
         tolerance := barRange[2] / 4
-    isBearishReversalBar := math.abs(swingHigh - open) <= tolerance
+    isBearishReversalBar := math.abs(swingHighOpen - open) <= tolerance or math.abs(swingHigh - open) <= tolerance
 
 notCandlestickIndication = not isDoji and not isHammer and not isShooter and not isInsideBar
 
