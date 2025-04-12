@@ -8,7 +8,7 @@ showHammers = input.bool(true, title="Show Hammers")
 showShooters = input.bool(true, title="Show Shooters")
 hammerBodyToTotalRatio = input(2.0, title="Hammer/Shooter Long Wick to Body Multiplier", tooltip="Set the multiplier for the minimum lower wick to body ratio for identifying hammers and upper wick to body ratio for identifying shooters.")
 shortWickToTotalRatio = input(0.15, title="Hammer/Shooter Short Wick to Range Multiplier", tooltip="Set the multiplier for the maximum upper wick to total bar range ratio for identifying hammers and lower wick to total bar range ratio for identifying shooters.")
-reversalBarShortWick = input(0.25, title="Reversal Bar Short Wick to Range Multiplier", tooltip="Set the multiplier for the maximum short wick to total bar range ratio for identifying reversal bars.")
+reversalBarShortWick = input(0.33, title="Reversal Bar Short Wick to Range Multiplier", tooltip="Set the multiplier for the maximum short wick to total bar range ratio for identifying reversal bars.")
 showDojis = input.bool(true, title="Show Dojis")
 dojiBodyToTotalRatio = input(0.10, title="Doji Body to Range Multiplier", tooltip="Set the maximum body to total bar range ratio for identifying doji bars.")
 showInsideBars = input.bool(true, title="Show Inside Bars")
@@ -134,9 +134,11 @@ isShooter = showShooters and isNotDojiAndSufficient and (upperWick >= body * ham
 
 // --- Pre-calculate Variables for Reversal Conditions ---
 float halfRange = barRange / 2
+possibleReversalBar = showReversalBar and sufficientVolatility and not isDoji
 
 // Bullish Reversal Bar: Should be mostly body or lower wick, closing near its high, and near the last swing low
-isBullishReversalBar = showReversalBar and sufficientVolatility and greenCandle and (close >= prevCandleMidPoint) and (body >= halfRange * 0.9 or (lowerWick >= halfRange * 0.9)) and ((barRange * reversalBarShortWick) >= upperWick)
+// Must close above the previous bar's midpoint or have a body larger than half of the previous bar's range
+isBullishReversalBar = possibleReversalBar and greenCandle and (close - open >= halfRange[1] or close >= prevCandleMidPoint) and (body >= halfRange * 0.9 or (lowerWick >= halfRange * 0.9)) and ((barRange * reversalBarShortWick) >= upperWick)
 
 if isBullishReversalBar
     float swingLowOpen  = na
@@ -158,7 +160,8 @@ if isBullishReversalBar
     isBullishReversalBar := math.abs(open - swingLowOpen) <= tolerance or math.abs(open - swingLow) <= tolerance
 
 // Bearish Reversal Bar: Should be mostly body or upper wick, closing near its low, and near the last swing high
-isBearishReversalBar = showReversalBar and sufficientVolatility and redCandle and (low <= prevCandleMidPoint) and (body >= halfRange * 0.9 or (upperWick >= halfRange * 0.9)) and ((barRange * reversalBarShortWick) >= lowerWick)
+// Must close below the previous bar's midpoint or have a body larger than half of the previous bar's range
+isBearishReversalBar = possibleReversalBar and redCandle and ((open - close) >= halfRange[1] or close <= prevCandleMidPoint) and (body >= halfRange * 0.9 or (upperWick >= halfRange * 0.9)) and ((barRange * reversalBarShortWick) >= lowerWick)
 
 if isBearishReversalBar
     float swingHighOpen = na
